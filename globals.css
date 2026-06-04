@@ -1,0 +1,181 @@
+/* src/app/globals.css */
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ═══════════════════════════════════════════
+   ТЁМНАЯ ТЕМА (по умолчанию)
+═══════════════════════════════════════════ */
+:root,
+[data-theme="dark"] {
+  --bg-base:        #0A0B0D;
+  --bg-surface:     #111318;
+  --bg-elevated:    #1A1D24;
+  --bg-subtle:      #242830;
+
+  --amber-400:      #FBBF24;
+  --amber-500:      #F59E0B;
+  --amber-glow:     rgba(251, 191, 36, 0.15);
+
+  --electric-blue:  #38BDF8;
+  --danger-red:     #EF4444;
+  --earth-green:    #22C55E;
+  --warning-orange: #FB923C;
+
+  --text-primary:   #F1F5F9;
+  --text-secondary: #94A3B8;
+  --text-muted:     #475569;
+
+  --border:         rgba(255, 255, 255, 0.08);
+  --border-accent:  rgba(251, 191, 36, 0.3);
+
+  --wire-l:   #EF4444;   /* Фаза — красный */
+  --wire-n:   #60A5FA;   /* Ноль — синий */
+  --wire-pe:  #86EFAC;   /* Земля — зелёный */
+  --wire-sw:  #C084FC;   /* Управляющий */
+  --wire-com: #FB923C;   /* Общий */
+}
+
+/* ═══════════════════════════════════════════
+   СВЕТЛАЯ ТЕМА
+═══════════════════════════════════════════ */
+[data-theme="light"] {
+  --bg-base:        #F8FAFC;
+  --bg-surface:     #FFFFFF;
+  --bg-elevated:    #F1F5F9;
+  --bg-subtle:      #E2E8F0;
+
+  --amber-400:      #D97706;
+  --amber-500:      #B45309;
+  --amber-glow:     rgba(217, 119, 6, 0.1);
+
+  --electric-blue:  #0284C7;
+  --danger-red:     #DC2626;
+  --earth-green:    #16A34A;
+  --warning-orange: #EA580C;
+
+  --text-primary:   #0F172A;
+  --text-secondary: #475569;
+  --text-muted:     #94A3B8;
+
+  --border:         rgba(0, 0, 0, 0.08);
+  --border-accent:  rgba(217, 119, 6, 0.3);
+
+  --wire-l:   #DC2626;
+  --wire-n:   #2563EB;
+  --wire-pe:  #16A34A;
+  --wire-sw:  #9333EA;
+  --wire-com: #EA580C;
+}
+
+/* ═══════════════════════════════════════════
+   BASE STYLES
+═══════════════════════════════════════════ */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  font-family: 'IBM Plex Sans', sans-serif;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Без flash при переключении темы */
+html.theme-loading * {
+  transition: none !important;
+}
+
+/* ═══════════════════════════════════════════
+   TYPOGRAPHY
+═══════════════════════════════════════════ */
+.font-display {
+  font-family: 'Rajdhani', sans-serif;
+  letter-spacing: -0.02em;
+}
+
+.font-mono {
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+/* Технические номиналы — крупным монопространственным */
+.rating-display {
+  font-family: 'IBM Plex Mono', monospace;
+  font-weight: 600;
+  font-size: 2.5rem;
+  color: var(--amber-400);
+  letter-spacing: -0.02em;
+}
+
+/* ═══════════════════════════════════════════
+   СЕТКА (инженерный фон)
+═══════════════════════════════════════════ */
+.bg-engineering-grid {
+  background-image:
+    linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+[data-theme="light"] .bg-engineering-grid {
+  background-image:
+    linear-gradient(rgba(0,0,0,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,0,0,0.04) 1px, transparent 1px);
+}
+
+/* ═══════════════════════════════════════════
+   SVG WIRE ANIMATIONS
+═══════════════════════════════════════════ */
+.wire-animated {
+  stroke-dasharray: 8 4;
+  stroke-dashoffset: 100;
+  animation: currentFlow 1.5s linear infinite;
+}
+
+@keyframes currentFlow {
+  to { stroke-dashoffset: 0; }
+}
+
+/* ═══════════════════════════════════════════
+   КОМПОНЕНТЫ — AMBER GLOW CARD
+═══════════════════════════════════════════ */
+.card-glow {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.card-glow:hover {
+  border-color: var(--border-accent);
+  box-shadow: 0 0 30px var(--amber-glow);
+}
+
+/* ═══════════════════════════════════════════
+   SCROLLBAR
+═══════════════════════════════════════════ */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--bg-subtle);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
