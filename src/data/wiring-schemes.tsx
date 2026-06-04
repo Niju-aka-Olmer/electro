@@ -7,48 +7,22 @@
 
 import React from 'react'
 
-// ─── ЦВЕТА (через CSS-переменные для тёмной/светлой темы) ───
+// ─── ЦВЕТА (ЧИСТЫЙ ПРОФЕССИОНАЛЬНЫЙ CAD-СТИЛЬ ГОСТ) ───
 const C = {
-  l:        'var(--wire-l)',
-  n:        'var(--wire-n)',
-  pe:       'var(--wire-pe)',
-  sw:       'var(--wire-sw)',
-  box:      'var(--border)',
-  boxBrd:   'var(--border-accent)',
-  txt:      'var(--text-primary)',
-  txtSec:   'var(--text-secondary)',
-  txtDim:   'var(--text-muted)',
-  bg:       'var(--bg-base)',
-  glow:     'var(--amber-glow)',
-  amber:    'var(--amber-500)',
-  wago:     'rgba(255, 120, 0, 0.8)', // Оранжевый Wago
+  l:        '#ef4444',
+  n:        '#3b82f6',
+  pe:       '#22c55e',
+  sw:       '#a855f7',
+  box:      '#94a3b8',
+  boxBrd:   '#1e293b',
+  txt:      '#1e293b',
+  txtSec:   '#475569',
+  txtDim:   '#64748b',
+  bg:       '#ffffff',
+  amber:    '#1e293b',
 }
 
-// ─── ОБЩИЕ ГРАДИЕНТЫ И ЭФФЕКТЫ ───
-const CommonDefs = () => (
-  <defs>
-    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="3" result="blur" />
-      <feComposite in="SourceGraphic" in2="blur" operator="over" />
-    </filter>
-    <linearGradient id="wire-l-grad" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stopColor="#ef4444" />
-      <stop offset="100%" stopColor="#b91c1c" />
-    </linearGradient>
-    <linearGradient id="wire-n-grad" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stopColor="#3b82f6" />
-      <stop offset="100%" stopColor="#1d4ed8" />
-    </linearGradient>
-    <linearGradient id="wire-pe-grad" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stopColor="#22c55e" />
-      <stop offset="100%" stopColor="#fbbf24" />
-    </linearGradient>
-    <linearGradient id="wire-sw-grad" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stopColor="#a855f7" />
-      <stop offset="100%" stopColor="#7e22ce" />
-    </linearGradient>
-  </defs>
-)
+const CommonDefs = () => <defs />
 
 // ─── ТИП ───
 export interface WiringScheme {
@@ -63,72 +37,42 @@ export interface WiringScheme {
 }
 
 // ─── УТИЛИТЫ ───
-function wire(x1: number, y1: number, x2: number, y2: number, type: 'l' | 'n' | 'pe' | 'sw', width = 3) {
-  const colors: Record<string, string> = {
-    l: 'url(#wire-l-grad)',
-    n: 'url(#wire-n-grad)',
-    pe: 'url(#wire-pe-grad)',
-    sw: 'url(#wire-sw-grad)'
-  }
-  return (
-    <g>
-      <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="rgba(0,0,0,0.2)" strokeWidth={width + 1} strokeLinecap="round" />
-      <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={colors[type]} strokeWidth={width} strokeLinecap="round" />
-    </g>
-  )
+function wire(x1: number, y1: number, x2: number, y2: number, type: 'l' | 'n' | 'pe' | 'sw', width = 2.5) {
+  return <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={C[type]} strokeWidth={width} strokeLinecap="round" strokeLinejoin="round" />
 }
 
 function line(x1: number, y1: number, x2: number, y2: number, color: string, width = 2) {
   return <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={color} strokeWidth={width} strokeLinecap="round" />
 }
 
-function txt(x: number, y: number, text: string, color: string, size = 10, bold = false) {
+function txt(x: number, y: number, text: string, color: string, size = 11, bold = false) {
   return (
-    <text x={x} y={y} textAnchor="middle" fontSize={size} fill={color} fontWeight={bold ? 'bold' : 'normal'} style={{ userSelect: 'none' }}>
+    <text x={x} y={y} textAnchor="middle" fontSize={size} fill={color} fontWeight={bold ? 'bold' : 'normal'} fontFamily="monospace">
       {text}
     </text>
   )
 }
 
-// ─── ПРИМИТИВЫ ───
+// ─── ПРИМИТИВЫ (ГОСТ / МЭК СТИЛЬ) ───
 
-/** Лампа (более реалистичная) */
 function Lamp({ x, y }: { x: number; y: number }) {
   return (
     <g>
-      <rect x={x - 6} y={y + 12} width="12" height="8" fill="#94a3b8" />
-      <circle cx={x} cy={y} r="16" stroke="#cbd5e1" strokeWidth="1" fill="white" fillOpacity="0.1" />
-      <path d={`M${x - 12} ${y + 10} A 16 16 0 1 1 ${x + 12} ${y + 10}`} stroke="#cbd5e1" strokeWidth="2" fill="none" />
-      <path d={`M${x - 5} ${y + 5} L${x} ${y - 5} L${x + 5} ${y + 5}`} stroke="#fbbf24" strokeWidth="1.5" fill="none" filter="url(#glow)" />
-      <circle cx={x - 14} cy={y} r="2" fill={C.sw} />
-      <circle cx={x + 14} cy={y} r="2" fill={C.n} />
+      <circle cx={x} cy={y} r="14" fill="#ffffff" stroke="#1e293b" strokeWidth="2" />
+      <path d={`M${x - 10} ${y - 10} L${x + 10} ${y + 10} M${x - 10} ${y + 10} L${x + 10} ${y - 10}`} stroke="#1e293b" strokeWidth="2" />
+      <text x={x} y={y + 26} textAnchor="middle" fontSize="11" fill="#1e293b" fontFamily="monospace" fontWeight="bold">HL</text>
     </g>
   )
 }
 
-/** Реалистичный выключатель (рамка + клавиша) */
 function SwitchBase({ x, y, keys = 1, label }: { x: number; y: number; keys?: 1 | 2 | 3; label?: string }) {
   return (
     <g>
-      <rect x={x - 20} y={y - 25} width="40" height="50" rx="4" fill="#f8fafc" stroke="#e2e8f0" strokeWidth="1" />
-      <rect x={x - 18} y={y - 23} width="36" height="46" rx="2" fill="white" />
-      {keys === 1 && (
-        <rect x={x - 12} y={y - 15} width="24" height="30" rx="1" fill="#f1f5f9" stroke="#cbd5e1" strokeWidth="0.5" />
-      )}
-      {keys === 2 && (
-        <>
-          <rect x={x - 13} y={y - 15} width="12" height="30" rx="1" fill="#f1f5f9" stroke="#cbd5e1" strokeWidth="0.5" />
-          <rect x={x + 1} y={y - 15} width="12" height="30" rx="1" fill="#f1f5f9" stroke="#cbd5e1" strokeWidth="0.5" />
-        </>
-      )}
-      {keys === 3 && (
-        <>
-          <rect x={x - 14} y={y - 15} width="8" height="30" rx="1" fill="#f1f5f9" stroke="#cbd5e1" strokeWidth="0.5" />
-          <rect x={x - 4} y={y - 15} width="8" height="30" rx="1" fill="#f1f5f9" stroke="#cbd5e1" strokeWidth="0.5" />
-          <rect x={x + 6} y={y - 15} width="8" height="30" rx="1" fill="#f1f5f9" stroke="#cbd5e1" strokeWidth="0.5" />
-        </>
-      )}
-      {label && <text x={x} y={y + 38} textAnchor="middle" fontSize="9" fill={C.txtSec} fontWeight="500">{label}</text>}
+      <circle cx={x - 12} cy={y} r="3" fill="#ffffff" stroke="#1e293b" strokeWidth="2" />
+      <path d={`M${x - 10} ${y - 2} L${x + 12} ${y - 16}`} stroke="#1e293b" strokeWidth="2" strokeLinecap="round" />
+      {keys > 1 && <path d={`M${x - 2} ${y - 6} L${x + 10} ${y - 10}`} stroke="#1e293b" strokeWidth="2" strokeLinecap="round" />}
+      {keys > 2 && <path d={`M${x + 4} ${y - 10} L${x + 14} ${y - 13}`} stroke="#1e293b" strokeWidth="2" strokeLinecap="round" />}
+      {label && <text x={x} y={y + 20} textAnchor="middle" fontSize="11" fill="#1e293b" fontFamily="monospace">{label}</text>}
     </g>
   )
 }
@@ -140,10 +84,10 @@ const Switch3 = (props: any) => <SwitchBase {...props} keys={3} />
 function PassSwitch({ x, y, label }: { x: number; y: number; label?: string }) {
   return (
     <g>
-      <SwitchBase x={x} y={y} keys={1} />
-      <path d={`M${x - 8} ${y - 10} L${x + 8} ${y + 10}`} stroke="#f97316" strokeWidth="1" opacity="0.6" />
-      <circle cx={x} cy={y} r="3" fill="#f97316" opacity="0.6" />
-      {label && <text x={x} y={y + 38} textAnchor="middle" fontSize="9" fill={C.txtSec} fontWeight="bold">{label}</text>}
+      <circle cx={x - 12} cy={y} r="3" fill="#ffffff" stroke="#1e293b" strokeWidth="2" />
+      <path d={`M${x - 10} ${y - 2} L${x + 12} ${y - 16}`} stroke="#1e293b" strokeWidth="2" strokeLinecap="round" />
+      <path d={`M${x - 10} ${y + 2} L${x + 12} ${y + 16}`} stroke="#1e293b" strokeWidth="2" strokeLinecap="round" strokeDasharray="3 3" />
+      {label && <text x={x} y={y + 24} textAnchor="middle" fontSize="11" fill="#1e293b" fontFamily="monospace">{label}</text>}
     </g>
   )
 }
@@ -151,9 +95,11 @@ function PassSwitch({ x, y, label }: { x: number; y: number; label?: string }) {
 function CrossSwitch({ x, y, label }: { x: number; y: number; label?: string }) {
   return (
     <g>
-      <SwitchBase x={x} y={y} keys={1} />
-      <path d={`M${x - 10} ${y - 10} L${x + 10} ${y + 10} M${x + 10} ${y - 10} L${x - 10} ${y + 10}`} stroke="#f97316" strokeWidth="1.5" />
-      {label && <text x={x} y={y + 38} textAnchor="middle" fontSize="9" fill="#f97316" fontWeight="bold">{label}</text>}
+      <circle cx={x - 12} cy={y - 8} r="3" fill="#ffffff" stroke="#1e293b" strokeWidth="2" />
+      <circle cx={x - 12} cy={y + 8} r="3" fill="#ffffff" stroke="#1e293b" strokeWidth="2" />
+      <path d={`M${x - 10} ${y - 8} L${x + 12} ${y + 8}`} stroke="#1e293b" strokeWidth="2" strokeLinecap="round" />
+      <path d={`M${x - 10} ${y + 8} L${x + 12} ${y - 8}`} stroke="#1e293b" strokeWidth="2" strokeLinecap="round" />
+      {label && <text x={x} y={y + 24} textAnchor="middle" fontSize="11" fill="#1e293b" fontFamily="monospace">{label}</text>}
     </g>
   )
 }
@@ -161,12 +107,10 @@ function CrossSwitch({ x, y, label }: { x: number; y: number; label?: string }) 
 function Socket({ x, y, label }: { x: number; y: number; label?: string }) {
   return (
     <g>
-      <rect x={x - 20} y={y - 25} width="40" height="50" rx="4" fill="#f8fafc" stroke="#e2e8f0" strokeWidth="1" />
-      <circle cx={x} cy={y} r="15" fill="white" stroke="#cbd5e1" strokeWidth="0.5" />
-      <circle cx={x - 6} cy={y} r="2" fill="#334155" />
-      <circle cx={x + 6} cy={y} r="2" fill="#334155" />
-      <path d={`M${x - 10} ${y + 12} L${x + 10} ${y + 12}`} stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" />
-      {label && <text x={x} y={y + 38} textAnchor="middle" fontSize="9" fill={C.txtSec}>{label}</text>}
+      <path d={`M${x - 12} ${y} A 12 12 0 0 0 ${x + 12} ${y}`} fill="none" stroke="#1e293b" strokeWidth="2" />
+      <line x1={x} y1={y} x2={x} y2={y - 12} stroke="#1e293b" strokeWidth="2" />
+      <line x1={x - 16} y1={y} x2={x + 16} y2={y} stroke="#1e293b" strokeWidth="2" />
+      {label && <text x={x} y={y + 20} textAnchor="middle" fontSize="11" fill="#1e293b" fontFamily="monospace">{label}</text>}
     </g>
   )
 }
@@ -174,27 +118,23 @@ function Socket({ x, y, label }: { x: number; y: number; label?: string }) {
 function JBox({ x, y, w, h }: { x: number; y: number; w: number; h: number }) {
   return (
     <g>
-      <rect x={x} y={y} width={w} height={h} rx="8" fill="rgba(255,255,255,0.05)" stroke={C.boxBrd} strokeWidth="2" />
-      <rect x={x + 4} y={y + 4} width={w - 8} height={h - 8} rx="4" fill="none" stroke={C.boxBrd} strokeWidth="1" opacity="0.3" />
-      <text x={x + w / 2} y={y - 8} textAnchor="middle" fontSize="11" fill={C.boxBrd} fontWeight="bold">Распредкоробка</text>
+      <rect x={x} y={y} width={w} height={h} fill="#f8fafc" stroke="#1e293b" strokeWidth="2" strokeDasharray="8 6" />
+      <text x={x + w / 2} y={y - 6} textAnchor="middle" fontSize="12" fill="#1e293b" fontWeight="bold" fontFamily="monospace">РАСПРЕДКОРОБКА</text>
     </g>
   )
 }
 
 function Dot({ cx, cy, color }: { cx: number; cy: number; color?: string }) {
-  return <circle cx={cx} cy={cy} r="4" fill={color || C.amber} stroke="white" strokeWidth="1" />
+  return <circle cx={cx} cy={cy} r="4" fill={color || "#1e293b"} />
 }
 
 function Wago({ x, y, label, color, ports = 3 }: { x: number; y: number; label?: string; color?: string; ports?: number }) {
-  const w = 24, h = 16
+  const w = 24, h = 14
   return (
     <g>
-      <rect x={x - w / 2} y={y - h / 2} width={w} height={h} rx="2" fill="rgba(255,255,255,0.9)" stroke="#d1d5db" strokeWidth="0.5" />
-      {[...Array(ports)].map((_, i) => (
-        <rect key={i} x={x - w / 2 + 2 + i * (w / ports)} y={y - h / 2 + 2} width={(w / ports) - 2} height={h - 8} rx="1" fill="#f97316" />
-      ))}
-      <rect x={x - w / 2} y={y + h / 2 - 4} width={w} height="4" fill={color || "#94a3b8"} fillOpacity="0.5" />
-      {label && <text x={x} y={y + h / 2 + 8} textAnchor="middle" fontSize="8" fill={color || C.txtDim} fontWeight="bold">{label}</text>}
+      <rect x={x - w / 2} y={y - h / 2} width={w} height={h} fill="#ffffff" stroke="#1e293b" strokeWidth="1.5" />
+      <circle cx={x} cy={y} r="2" fill="#1e293b" />
+      {label && <text x={x} y={y - h / 2 - 4} textAnchor="middle" fontSize="11" fill={color || "#1e293b"} fontWeight="bold" fontFamily="monospace">{label}</text>}
     </g>
   )
 }
@@ -202,12 +142,11 @@ function Wago({ x, y, label, color, ports = 3 }: { x: number; y: number; label?:
 function WireLegend({ x, y }: { x: number; y: number }) {
   return (
     <g>
-      <rect x={x - 5} y={y - 12} width="220" height="18" rx="4" fill="rgba(255,255,255,0.5)" />
-      <text x={x} y={y} fontSize="9" fill={C.txtSec} fontWeight="500">
-        <tspan fill="#ef4444" fontWeight="bold">●</tspan> L (фаза)
-        <tspan dx="10" fill="#3b82f6" fontWeight="bold">●</tspan> N (ноль)
-        <tspan dx="10" fill="#22c55e" fontWeight="bold">●</tspan> PE (земля)
-        <tspan dx="10" fill="#a855f7" fontWeight="bold">●</tspan> L(упр)
+      <text x={x} y={y} fontSize="12" fill={C.txtSec} fontWeight="bold" fontFamily="monospace">
+        <tspan fill={C.l}>— L(фаза)</tspan>
+        <tspan dx="15" fill={C.n}>— N(ноль)</tspan>
+        <tspan dx="15" fill={C.pe}>— PE(земля)</tspan>
+        <tspan dx="15" fill={C.sw}>— SW(упр)</tspan>
       </text>
     </g>
   )
@@ -219,7 +158,7 @@ function WireLegend({ x, y }: { x: number; y: number }) {
 export const SvgSingleSwitch: React.FC = () => {
   const jx = 200, jy = 100, jw = 140, jh = 100, swX = 70, lampX = 440, feedY = 280
   return (
-    <svg viewBox="0 0 550 350" className="w-full h-auto" fill="none" style={{ background: 'var(--bg-surface)' }}>
+    <svg viewBox="0 0 550 350" className="w-full h-auto" fill="none" style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "8px" }}>
       <CommonDefs />
       {/* Питание от щитка */}
       {wire(270, feedY, 270, jy + jh, 'l')}
@@ -280,7 +219,7 @@ export const SvgTwoKeySwitch: React.FC = () => {
   const jx = 200, jy = 90, jw = 160, jh = 110, swX = 60, lamp1X = 460, lamp2X = 460, feedY = 280
   const lamp1Y = jy + jh / 2 - 30, lamp2Y = jy + jh / 2 + 30
   return (
-    <svg viewBox="0 0 560 350" className="w-full h-auto" fill="none" style={{ background: 'var(--bg-surface)' }}>
+    <svg viewBox="0 0 560 350" className="w-full h-auto" fill="none" style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "8px" }}>
       <CommonDefs />
       {wire(270, feedY, 270, jy + jh, 'l')}
       {wire(290, feedY, 290, jy + jh, 'n')}
@@ -351,7 +290,7 @@ export const SvgThreeKeySwitch: React.FC = () => {
   const jx = 200, jy = 80, jw = 170, jh = 130, swX = 50
   const lampYs = [jy + jh / 2 - 40, jy + jh / 2, jy + jh / 2 + 40], lampX = 470, feedY = 290
   return (
-    <svg viewBox="0 0 570 370" className="w-full h-auto" fill="none" style={{ background: 'var(--bg-surface)' }}>
+    <svg viewBox="0 0 570 370" className="w-full h-auto" fill="none" style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "8px" }}>
       <CommonDefs />
       {wire(270, feedY, 270, jy + jh, 'l')}
       {wire(290, feedY, 290, jy + jh, 'n')}
@@ -412,7 +351,7 @@ export const SvgThreeKeySwitch: React.FC = () => {
 export const SvgPassThrough2: React.FC = () => {
   const jx = 220, jy = 100, jw = 150, jh = 110, sw1X = 60, sw2X = 500, lampX = 620, feedY = 290
   return (
-    <svg viewBox="0 0 700 360" className="w-full h-auto" fill="none" style={{ background: 'var(--bg-surface)' }}>
+    <svg viewBox="0 0 700 360" className="w-full h-auto" fill="none" style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "8px" }}>
       <CommonDefs />
       {wire(300, feedY, 300, jy + jh, 'l')}
       {wire(320, feedY, 320, jy + jh, 'n')}
@@ -469,7 +408,7 @@ export const SvgPassThrough2: React.FC = () => {
 export const SvgPassThrough3: React.FC = () => {
   const jx = 220, jy = 90, jw = 160, jh = 120, sw1X = 50, crossX = 360, sw2X = 520, lampX = 640, feedY = 290
   return (
-    <svg viewBox="0 0 710 370" className="w-full h-auto" fill="none" style={{ background: 'var(--bg-surface)' }}>
+    <svg viewBox="0 0 710 370" className="w-full h-auto" fill="none" style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "8px" }}>
       <CommonDefs />
       {wire(300, feedY, 300, jy + jh, 'l')}
       {wire(320, feedY, 320, jy + jh, 'n')}
@@ -514,7 +453,7 @@ export const SvgPassThrough3: React.FC = () => {
 export const SvgPassThrough4: React.FC = () => {
   const jx = 220, jy = 90, jw = 170, jh = 120, sw1X = 40, cross1X = 320, cross2X = 440, sw2X = 540, lampX = 650, feedY = 290
   return (
-    <svg viewBox="0 0 740 370" className="w-full h-auto" fill="none" style={{ background: 'var(--bg-surface)' }}>
+    <svg viewBox="0 0 740 370" className="w-full h-auto" fill="none" style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "8px" }}>
       <CommonDefs />
       {wire(310, feedY, 310, jy + jh, 'l')}
       {wire(330, feedY, 330, jy + jh, 'n')}
@@ -562,7 +501,7 @@ export const SvgDualPassThrough: React.FC = () => {
   const lamp1Y = jy + jh / 2 - 35, lamp2Y = jy + jh / 2 + 35
   const feedY = 310
   return (
-    <svg viewBox="0 0 730 380" className="w-full h-auto" fill="none" style={{ background: 'var(--bg-surface)' }}>
+    <svg viewBox="0 0 730 380" className="w-full h-auto" fill="none" style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "8px" }}>
       <CommonDefs />
       {wire(300, feedY, 300, jy + jh, 'l')}
       {wire(320, feedY, 320, jy + jh, 'n')}
@@ -606,7 +545,7 @@ export const SvgDualPassThrough: React.FC = () => {
 export const SvgImpulseRelay: React.FC = () => {
   const jx = 200, jy = 90, jw = 160, jh = 120, btnX = 60, lampX = 460, feedY = 280
   return (
-    <svg viewBox="0 0 560 360" className="w-full h-auto" fill="none" style={{ background: 'var(--bg-surface)' }}>
+    <svg viewBox="0 0 560 360" className="w-full h-auto" fill="none" style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "8px" }}>
       <CommonDefs />
       {wire(270, feedY, 270, jy + jh, 'l')}
       {wire(290, feedY, 290, jy + jh, 'n')}
@@ -651,7 +590,7 @@ export const SvgImpulseRelay: React.FC = () => {
 export const SvgDimmer: React.FC = () => {
   const jx = 200, jy = 100, jw = 140, jh = 100, dimX = 60, lampX = 440, feedY = 280
   return (
-    <svg viewBox="0 0 550 350" className="w-full h-auto" fill="none" style={{ background: 'var(--bg-surface)' }}>
+    <svg viewBox="0 0 550 350" className="w-full h-auto" fill="none" style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "8px" }}>
       <CommonDefs />
       {wire(270, feedY, 270, jy + jh, 'l')}
       {wire(290, feedY, 290, jy + jh, 'n')}
@@ -690,7 +629,7 @@ export const SvgDimmer: React.FC = () => {
 export const SvgSwitchWithIndicator: React.FC = () => {
   const jx = 200, jy = 100, jw = 140, jh = 100, swX = 70, lampX = 440, feedY = 280
   return (
-    <svg viewBox="0 0 550 350" className="w-full h-auto" fill="none" style={{ background: 'var(--bg-surface)' }}>
+    <svg viewBox="0 0 550 350" className="w-full h-auto" fill="none" style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "8px" }}>
       <CommonDefs />
       {wire(270, feedY, 270, jy + jh, 'l')}
       {wire(290, feedY, 290, jy + jh, 'n')}
@@ -726,7 +665,7 @@ export const SvgSwitchWithIndicator: React.FC = () => {
 export const SvgMotionSensor: React.FC = () => {
   const jx = 200, jy = 90, jw = 150, jh = 120, senX = 50, lampX = 460, feedY = 290
   return (
-    <svg viewBox="0 0 570 370" className="w-full h-auto" fill="none" style={{ background: 'var(--bg-surface)' }}>
+    <svg viewBox="0 0 570 370" className="w-full h-auto" fill="none" style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "8px" }}>
       <CommonDefs />
       {wire(275, feedY, 275, jy + jh, 'l')}
       {wire(295, feedY, 295, jy + jh, 'n')}
@@ -765,7 +704,7 @@ export const SvgMotionSensor: React.FC = () => {
 export const SvgTwilightSwitch: React.FC = () => {
   const jx = 200, jy = 90, jw = 150, jh = 110, phX = 60, lampX = 470, feedY = 280
   return (
-    <svg viewBox="0 0 580 360" className="w-full h-auto" fill="none" style={{ background: 'var(--bg-surface)' }}>
+    <svg viewBox="0 0 580 360" className="w-full h-auto" fill="none" style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "8px" }}>
       <CommonDefs />
       {wire(275, feedY, 275, jy + jh, 'l')}
       {wire(295, feedY, 295, jy + jh, 'n')}
@@ -804,7 +743,7 @@ export const SvgSocketSwitch: React.FC = () => {
   const jx = 200, jy = 80, jw = 170, jh = 130, swX = 50, skX = 50, lampX = 480, feedY = 290
   const swY = jy + jh / 2 - 25, skY = jy + jh / 2 + 30
   return (
-    <svg viewBox="0 0 600 370" className="w-full h-auto" fill="none" style={{ background: 'var(--bg-surface)' }}>
+    <svg viewBox="0 0 600 370" className="w-full h-auto" fill="none" style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "8px" }}>
       <CommonDefs />
       {wire(280, feedY, 280, jy + jh, 'l')}
       {wire(300, feedY, 300, jy + jh, 'n')}
@@ -842,7 +781,7 @@ export const SvgSocketSwitch: React.FC = () => {
 export const SvgPassThrough5: React.FC = () => {
   const jx = 220, jy = 80, jw = 170, jh = 130, sw1X = 30, cross1X = 250, cross2X = 350, cross3X = 450, sw2X = 560, lampX = 660, feedY = 290
   return (
-    <svg viewBox="0 0 760 380" className="w-full h-auto" fill="none" style={{ background: 'var(--bg-surface)' }}>
+    <svg viewBox="0 0 760 380" className="w-full h-auto" fill="none" style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "8px" }}>
       <CommonDefs />
       {wire(310, feedY, 310, jy + jh, 'l')}
       {wire(330, feedY, 330, jy + jh, 'n')}
@@ -889,7 +828,7 @@ export const SvgDualCrossPass: React.FC = () => {
   const lamp1X = 600, lamp2X = 600, lamp1Y = jy + jh / 2 - 35, lamp2Y = jy + jh / 2 + 35
   const feedY = 310
   return (
-    <svg viewBox="0 0 700 400" className="w-full h-auto" fill="none" style={{ background: 'var(--bg-surface)' }}>
+    <svg viewBox="0 0 700 400" className="w-full h-auto" fill="none" style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "8px" }}>
       <CommonDefs />
       {wire(310, feedY, 310, jy + jh, 'l')}
       {wire(330, feedY, 330, jy + jh, 'n')}

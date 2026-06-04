@@ -225,8 +225,8 @@ export default function SchemesPage() {
                     <div className="text-right">Жила</div>
                   </div>
                   <div className="divide-y divide-border">
-                    {rows.map((r, idx) => (
-                      <div key={idx} className="grid grid-cols-[160px_1fr_1fr_80px] px-3 py-2 text-xs text-text-muted">
+                    {rows.map((r: any, idx: number) => (
+                      <div key={idx} className="grid grid-cols-[160px_1fr_1fr_80px] px-3 py-2 text-[13px] gap-2 items-center hover:bg-muted/30 transition-colors">
                         <div className="text-text-secondary">{r.scope}</div>
                         <div className="min-w-0 truncate">{r.from}</div>
                         <div className="min-w-0 truncate">{r.to || '—'}</div>
@@ -250,7 +250,7 @@ export default function SchemesPage() {
             <div className="mt-5 rounded-lg border border-border bg-bg-base p-4">
               <h3 className="mb-2 text-sm font-semibold text-text-secondary">Как собрать в распредкоробке</h3>
               <ul className="space-y-1 text-xs text-text-muted">
-                {active.connections.map((item, idx) => (
+                {active.connections.map((item: string, idx: number) => (
                   <li key={idx} className="flex gap-2">
                     <span className="mt-[2px] inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-accent-amber/70" />
                     <span>{item}</span>
