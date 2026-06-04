@@ -100,49 +100,102 @@ export function createDiffBreaker(
  * → Розетки: 30мА
  * → Освещение: часто без УЗО (ПУЭ допускает)
  * → Рекомендуется ПУЭ 7.1.83
+ *
+ * @param bathroomStrategy - 'economy': один диф на влажное помещение (розетки+свет через него)
+ *                          - 'separate': отдельный диф на розетки и отдельный на свет
  */
 export function generateRCDStrategy(
   rooms: RoomConfig[],
-  groupBreakers: CircuitBreaker[]
+  groupBreakers: CircuitBreaker[],
+  bathroomStrategy: 'economy' | 'separate' = 'economy'
 ): {
   strategy: 'single' | 'grouped'
   devices: RCD[]
   explanation: string
 } {
   const totalGroups = groupBreakers.length
-  
+
+  /** Создать устройства для влажной комнаты по выбранной стратегии */
+  function makeWetRoomDiffs(room: RoomConfig): RCD[] {
+    const socketBreakers = groupBreakers.filter(b => b.id.startsWith(room.id) && b.id.includes('socket'))
+    const lightBreakers = groupBreakers.filter(b => b.id.startsWith(room.id) && b.id.includes('light'))
+    const loadBreakers = groupBreakers.filter(b => b.id.startsWith(room.id) && b.id.includes('load'))
+
+    if (bathroomStrategy === 'separate') {
+      // Вариант Б: 2 отдельных дифа — на розетки и на свет
+      const result: RCD[] = []
+
+      if (socketBreakers.length > 0 || loadBreakers.length > 0) {
+        const allPowerBreakers = [...socketBreakers, ...loadBreakers]
+        const maxRating = Math.max(...allPowerBreakers.map(b => b.rating), 16)
+        result.push(createDiffBreaker(
+          `diff_${room.id}_power`,
+          Math.min(maxRating, 25) as 10 | 25 | 40 | 63,
+          10,
+          `${room.name} (розетки/техника)`,
+          `Дифавтомат ${Math.min(maxRating, 25)}А/10мА на розетки и технику в ${room.name}. ` +
+          `Отдельный диф — при срабатывании свет продолжает гореть (ПУЭ 7.1.83).`
+        ))
+      }
+
+      if (lightBreakers.length > 0) {
+        const maxLightRating = Math.max(...lightBreakers.map(b => b.rating), 10)
+        result.push(createDiffBreaker(
+          `diff_${room.id}_light`,
+          Math.min(maxLightRating, 25) as 10 | 25 | 40 | 63,
+          10,
+          `${room.name} (освещение)`,
+          `Дифавтомат ${Math.min(maxLightRating, 25)}А/10мА на освещение в ${room.name}. ` +
+          `Отдельный диф — при срабатывании розеток свет остаётся включённым (ПУЭ 7.1.83).`
+        ))
+      }
+
+      return result
+    }
+
+    // Вариант А (economy): один диф на всё влажное помещение
+    const roomBreakers = groupBreakers.filter(b => b.id.startsWith(room.id))
+    const maxRating = Math.max(...roomBreakers.map(b => b.rating), 16)
+    const diffRating = Math.min(maxRating, 25) as 10 | 25 | 40 | 63
+
+    // Этот диф защищает все группы в помещении
+    // (автоматы на розетки, свет и технику стоят после него)
+    return [createDiffBreaker(
+      `diff_${room.id}`,
+      diffRating,
+      10,
+      room.name,
+      `Дифавтомат ${diffRating}А/10мА в ${room.name} — защищает все линии в помещении. ` +
+      `Эконом-вариант: один диф на розетки, свет и технику. ` +
+      `При срабатывании всё помещение обесточивается (ПУЭ 7.1.83).`
+    )]
+  }
+
   // Для маленьких квартир (≤8 групп) — одно вводное УЗО
   if (totalGroups <= 8) {
     const mainRCD = createRCD(
       'rcd_main',
       selectRCDRating(groupBreakers),
       30,
-      groupBreakers.map(b => b.id),
+      groupBreakers.map(b => b.group),
       `Вводное УЗО 30мА защищает все группы. `
         + `Для квартир до 8 групп — оптимальное решение по стоимости. `
         + `ПУЭ 7.1.83.`
     )
-    
-    // Но ванная/туалет — дополнительно дифавтомат 10мА
+
     const wetRoomDiffs: RCD[] = rooms
       .filter(r => HIGH_RISK_ROOMS.includes(r.type))
-      .map(room => {
-        const roomBreakers = groupBreakers.filter(b => b.id.startsWith(room.id))
-        return createDiffBreaker(
-          `diff_${room.id}`,
-          16,
-          10,
-          room.id,
-          `Дифавтомат 16А/10мА в ${room.name} — обязателен для влажных помещений (ПУЭ 7.1.83). `
-            + `Срабатывает быстрее УЗО 30мА, критично при контакте с водой.`
-        )
-      })
+      .flatMap(makeWetRoomDiffs)
+
+    const strategyLabel = bathroomStrategy === 'economy'
+      ? `один диф на влажное помещение (розетки+свет через него)`
+      : `отдельные дифавтоматы на розетки и на свет в каждом влажном помещении`
 
     return {
       strategy: 'single',
       devices: [mainRCD, ...wetRoomDiffs],
       explanation: `Выбрана схема с одним вводным УЗО ${mainRCD.ratingAmps}А/30мА для всей квартиры. `
-        + `Влажные помещения дополнительно защищены дифавтоматами 10мА. `
+        + `Влажные помещения: ${strategyLabel}. `
         + `При срабатывании вводного УЗО отключится вся квартира — это нормально для данной схемы.`
     }
   }
@@ -156,17 +209,12 @@ export function generateRCDStrategy(
 
   const devices: RCD[] = []
 
+  // Влажные помещения — по выбранной стратегии
   if (zones.wet.length > 0) {
-    const wetBreakers = groupBreakers.filter(b =>
-      zones.wet.some(r => b.id.startsWith(r.id))
-    )
-    devices.push(createRCD(
-      'rcd_wet',
-      selectRCDRating(wetBreakers),
-      10,
-      wetBreakers.map(b => b.id),
-      `УЗО 10мА для ванной/туалета — обязательно (ПУЭ 7.1.83).`
-    ))
+    zones.wet.forEach(room => {
+      const wetDiffs = makeWetRoomDiffs(room)
+      devices.push(...wetDiffs)
+    })
   }
 
   if (zones.kitchen.length > 0) {
@@ -177,7 +225,7 @@ export function generateRCDStrategy(
       'rcd_kitchen',
       selectRCDRating(kitchenBreakers),
       30,
-      kitchenBreakers.map(b => b.id),
+      kitchenBreakers.map(b => b.group),
       `УЗО 30мА для кухни — повышенная влажность, риск поражения током (ПУЭ 7.1.83).`
     ))
   }
@@ -190,16 +238,21 @@ export function generateRCDStrategy(
       'rcd_living',
       selectRCDRating(livingBreakers),
       30,
-      livingBreakers.map(b => b.id),
+      livingBreakers.map(b => b.group),
       `УЗО 30мА для жилых комнат и коридора. Стандартная защита (ПУЭ 7.1.83).`
     ))
   }
+
+  const strategyLabel = bathroomStrategy === 'economy'
+    ? `один диф на влажное помещение (розетки+свет через него)`
+    : `отдельные дифавтоматы на розетки и на свет`
 
   return {
     strategy: 'grouped',
     devices,
     explanation: `Выбрана схема с групповыми УЗО по зонам. `
+      + `Влажные помещения: ${strategyLabel}. `
       + `Преимущество: при срабатывании отключается только одна зона. `
-      + `Влажные помещения защищены УЗО 10мА, остальные — 30мА.`
+      + `ПУЭ 7.1.83.`
   }
 }

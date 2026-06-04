@@ -116,7 +116,7 @@ export function getPanelLayout(
   rcdDevices: RCD[],
   groupBreakers: CircuitBreaker[]
 ): { label: string; device: CircuitBreaker | RCD; rail: number; position: number }[] {
-  const layout = []
+  const layout: { label: string; device: CircuitBreaker | RCD; rail: number; position: number }[] = []
   let rail = 1
   let position = 1
 
