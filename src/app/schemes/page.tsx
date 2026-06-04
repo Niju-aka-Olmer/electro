@@ -6,6 +6,7 @@ import { SCHEMES } from '@/data/wiring-schemes'
 
 export default function SchemesPage() {
   const [activeScheme, setActiveScheme] = useState<string>(SCHEMES[0].id)
+  const [showHelp, setShowHelp] = useState(true)
 
   const active = SCHEMES.find(s => s.id === activeScheme) ?? SCHEMES[0]
   const SvgComponent = active.Svg
@@ -68,34 +69,61 @@ export default function SchemesPage() {
             </div>
           </div>
 
-          <div className="mb-3 flex flex-wrap gap-4 text-xs text-text-muted">
-            <span>🔌 Кабель: {active.cableInfo}</span>
-            <span>📦 {active.devices}</span>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3 text-xs text-text-muted">
+            <div className="flex flex-wrap gap-4">
+              <span>Кабель: {active.cableInfo}</span>
+              <span>Устройства: {active.devices}</span>
+            </div>
+            <button
+              onClick={() => setShowHelp(v => !v)}
+              className={cn(
+                'rounded-md border px-3 py-1 text-xs font-medium transition-colors',
+                showHelp
+                  ? 'border-accent-amber bg-accent-amber/10 text-accent-amber'
+                  : 'border-border bg-bg-elevated text-text-secondary hover:border-border-accent'
+              )}
+            >
+              {showHelp ? 'Скрыть подсказки' : 'Показать подсказки'}
+            </button>
           </div>
 
           <div className="rounded-lg bg-bg-base p-4">
             <SvgComponent />
           </div>
+
+          {showHelp && (
+            <div className="mt-5 rounded-lg border border-border bg-bg-base p-4">
+              <h3 className="mb-2 text-sm font-semibold text-text-secondary">Как собрать в распредкоробке</h3>
+              <ul className="space-y-1 text-xs text-text-muted">
+                {active.connections.map((item, idx) => (
+                  <li key={idx} className="flex gap-2">
+                    <span className="mt-[2px] inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-accent-amber/70" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
 
         {/* Пояснения */}
         <div className="mt-8 grid gap-4 md:grid-cols-3">
           <div className="rounded-xl border border-border bg-bg-elevated p-4">
-            <h3 className="mb-2 text-sm font-semibold">🔍 Как читать схему</h3>
+            <h3 className="mb-2 text-sm font-semibold">Как читать схему</h3>
             <p className="text-xs text-text-muted leading-relaxed">
               L — фаза (коричневый), N — ноль (синий), PE — заземление (жёлто-зелёный),
               L(упр) — управляющий провод (фиолетовый).
             </p>
           </div>
           <div className="rounded-xl border border-border bg-bg-elevated p-4">
-            <h3 className="mb-2 text-sm font-semibold">⚡ Безопасность</h3>
+            <h3 className="mb-2 text-sm font-semibold">Безопасность</h3>
             <p className="text-xs text-text-muted leading-relaxed">
               Все работы проводить при отключённом напряжении.
               Монтаж — только с допуском III группы.
             </p>
           </div>
           <div className="rounded-xl border border-border bg-bg-elevated p-4">
-            <h3 className="mb-2 text-sm font-semibold">📐 Сечения</h3>
+            <h3 className="mb-2 text-sm font-semibold">Сечения</h3>
             <p className="text-xs text-text-muted leading-relaxed">
               Освещение: 1.5мм² · Розетки: 2.5мм² · Варочная: 6мм²
             </p>

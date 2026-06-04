@@ -58,6 +58,7 @@ export interface WiringScheme {
   category: string
   cableInfo: string
   devices: string
+  connections: string[]
   Svg: React.FC
 }
 
@@ -926,6 +927,12 @@ export const SCHEMES: WiringScheme[] = [
     category: "Обычные",
     cableInfo: "3×1.5мм² (L+N+PE)",
     devices: "Выключатель 1кл, лампа",
+    connections: [
+      "В коробке: N(щиток) → N(лампа)",
+      "В коробке: PE(щиток) → PE(лампа)",
+      "В коробке: L(щиток) → L(выключатель)",
+      "В коробке: SW(выключатель) → L(лампа)",
+    ],
     Svg: SvgSingleSwitch,
   },
   {
@@ -935,6 +942,13 @@ export const SCHEMES: WiringScheme[] = [
     category: "Обычные",
     cableInfo: "4×1.5мм² (L+L1+L2+N+PE)",
     devices: "Выключатель 2кл, 2 лампы",
+    connections: [
+      "В коробке: N(щиток) → N(лампа1) + N(лампа2)",
+      "В коробке: PE(щиток) → PE(лампа1) + PE(лампа2)",
+      "В коробке: L(щиток) → L(выключатель)",
+      "В коробке: SW1(выключатель) → L(лампа1)",
+      "В коробке: SW2(выключатель) → L(лампа2)",
+    ],
     Svg: SvgTwoKeySwitch,
   },
   {
@@ -944,6 +958,14 @@ export const SCHEMES: WiringScheme[] = [
     category: "Обычные",
     cableInfo: "5×1.5мм² (L+L1+L2+L3+N+PE)",
     devices: "Выключатель 3кл, 3 лампы",
+    connections: [
+      "В коробке: N(щиток) → N(лампа1) + N(лампа2) + N(лампа3)",
+      "В коробке: PE(щиток) → PE(лампа1) + PE(лампа2) + PE(лампа3)",
+      "В коробке: L(щиток) → L(выключатель)",
+      "В коробке: SW1(выключатель) → L(лампа1)",
+      "В коробке: SW2(выключатель) → L(лампа2)",
+      "В коробке: SW3(выключатель) → L(лампа3)",
+    ],
     Svg: SvgThreeKeySwitch,
   },
   {
@@ -953,6 +975,14 @@ export const SCHEMES: WiringScheme[] = [
     category: "Проходные",
     cableInfo: "5×1.5мм² (L+P1+P2+N+PE)",
     devices: "2 проходных выключателя, лампа",
+    connections: [
+      "В коробке: L(щиток) → COM(S1)",
+      "Между S1 и S2: P1 ↔ P1",
+      "Между S1 и S2: P2 ↔ P2",
+      "В коробке: COM(S2) → L(лампа)",
+      "В коробке: N(щиток) → N(лампа)",
+      "В коробке: PE(щиток) → PE(лампа)",
+    ],
     Svg: SvgPassThrough2,
   },
   {
@@ -962,6 +992,14 @@ export const SCHEMES: WiringScheme[] = [
     category: "Проходные",
     cableInfo: "5×1.5мм² (L+P1+P2+N+PE)",
     devices: "2 проходных + перекрёстный, лампа",
+    connections: [
+      "В коробке: L(щиток) → COM(S1)",
+      "S1 → S2✕: P1/P2 (две жилы путешественники)",
+      "S2✕ → S3: P1/P2 (две жилы путешественники)",
+      "В коробке: COM(S3) → L(лампа)",
+      "В коробке: N(щиток) → N(лампа)",
+      "В коробке: PE(щиток) → PE(лампа)",
+    ],
     Svg: SvgPassThrough3,
   },
   {
@@ -971,6 +1009,15 @@ export const SCHEMES: WiringScheme[] = [
     category: "Проходные",
     cableInfo: "5×1.5мм² (L+P1+P2+N+PE)",
     devices: "2 проходных + 2 перекрёстных, лампа",
+    connections: [
+      "В коробке: L(щиток) → COM(S1)",
+      "S1 → S2✕: P1/P2",
+      "S2✕ → S3✕: P1/P2",
+      "S3✕ → S4: P1/P2",
+      "В коробке: COM(S4) → L(лампа)",
+      "В коробке: N(щиток) → N(лампа)",
+      "В коробке: PE(щиток) → PE(лампа)",
+    ],
     Svg: SvgPassThrough4,
   },
   {
@@ -980,6 +1027,16 @@ export const SCHEMES: WiringScheme[] = [
     category: "Проходные",
     cableInfo: "7×1.5мм² (2×L+2×P1+2×P2+N+PE)",
     devices: "2 двухкл. проходных, 2 лампы",
+    connections: [
+      "Группа A: L(щиток) → COM(S1A)",
+      "Группа A: P1/P2 между S1A и S2A",
+      "Группа A: COM(S2A) → L(лампаA)",
+      "Группа B: L(щиток) → COM(S1B)",
+      "Группа B: P1/P2 между S1B и S2B",
+      "Группа B: COM(S2B) → L(лампаB)",
+      "В коробке: N(щиток) → N(лампаA) + N(лампаB)",
+      "В коробке: PE(щиток) → PE(лампаA) + PE(лампаB)",
+    ],
     Svg: SvgDualPassThrough,
   },
   {
@@ -989,6 +1046,16 @@ export const SCHEMES: WiringScheme[] = [
     category: "Проходные",
     cableInfo: "5×1.5мм² (L+P1+P2+N+PE)",
     devices: "2 проходных + 3 перекрёстных, лампа",
+    connections: [
+      "В коробке: L(щиток) → COM(S1)",
+      "S1 → S2✕: P1/P2",
+      "S2✕ → S3✕: P1/P2",
+      "S3✕ → S4✕: P1/P2",
+      "S4✕ → S5: P1/P2",
+      "В коробке: COM(S5) → L(лампа)",
+      "В коробке: N(щиток) → N(лампа)",
+      "В коробке: PE(щиток) → PE(лампа)",
+    ],
     Svg: SvgPassThrough5,
   },
   {
@@ -998,6 +1065,16 @@ export const SCHEMES: WiringScheme[] = [
     category: "Проходные",
     cableInfo: "7×1.5мм² (2×L+2×P1+2×P2+N+PE)",
     devices: "2 двухкл. проходных + 2 перекрёстных, 2 лампы",
+    connections: [
+      "Группа A: L(щиток) → COM(S1A)",
+      "Группа A: P1/P2 между S1A и S2✕A, затем между S2✕A и S3A",
+      "Группа A: COM(S3A) → L(лампаA)",
+      "Группа B: L(щиток) → COM(S1B)",
+      "Группа B: P1/P2 между S1B и S2✕B, затем между S2✕B и S3B",
+      "Группа B: COM(S3B) → L(лампаB)",
+      "В коробке: N(щиток) → N(лампаA) + N(лампаB)",
+      "В коробке: PE(щиток) → PE(лампаA) + PE(лампаB)",
+    ],
     Svg: SvgDualCrossPass,
   },
   {
@@ -1007,6 +1084,13 @@ export const SCHEMES: WiringScheme[] = [
     category: "Специальные",
     cableInfo: "3×1.5мм² (L+N+PE) + витая пара",
     devices: "Импульсное реле, кнопки, лампа",
+    connections: [
+      "В коробке: L(щиток) → клемма 1 реле (вход силовой)",
+      "В коробке: клемма 2 реле (выход) → L(лампа)",
+      "В коробке: N(щиток) → N(лампа) + A2(катушка реле)",
+      "Кнопка: L(щиток) → кнопка → A1(катушка реле)",
+      "В коробке: PE(щиток) → PE(лампа)",
+    ],
     Svg: SvgImpulseRelay,
   },
   {
@@ -1016,6 +1100,12 @@ export const SCHEMES: WiringScheme[] = [
     category: "Специальные",
     cableInfo: "3×1.5мм² (L+N+PE)",
     devices: "Диммер, лампа",
+    connections: [
+      "В коробке: N(щиток) → N(лампа)",
+      "В коробке: PE(щиток) → PE(лампа)",
+      "В коробке: L(щиток) → L(диммер)",
+      "В коробке: выход диммера (SW) → L(лампа)",
+    ],
     Svg: SvgDimmer,
   },
   {
@@ -1025,6 +1115,12 @@ export const SCHEMES: WiringScheme[] = [
     category: "Специальные",
     cableInfo: "3×1.5мм² (L+N+PE)",
     devices: "Выключатель с неонкой, лампа",
+    connections: [
+      "В коробке: N(щиток) → N(лампа) (и на подсветку, если требуется по модели)",
+      "В коробке: PE(щиток) → PE(лампа)",
+      "В коробке: L(щиток) → L(выключатель)",
+      "В коробке: SW(выключатель) → L(лампа)",
+    ],
     Svg: SvgSwitchWithIndicator,
   },
   {
@@ -1034,6 +1130,12 @@ export const SCHEMES: WiringScheme[] = [
     category: "Автоматика",
     cableInfo: "3×1.5мм² (L+N+PE)",
     devices: "Датчик движения, лампа",
+    connections: [
+      "В коробке: L(щиток) → L(датчик)",
+      "В коробке: N(щиток) → N(датчик) + N(лампа)",
+      "В коробке: выход датчика (SW) → L(лампа)",
+      "В коробке: PE(щиток) → PE(лампа)",
+    ],
     Svg: SvgMotionSensor,
   },
   {
@@ -1043,6 +1145,12 @@ export const SCHEMES: WiringScheme[] = [
     category: "Автоматика",
     cableInfo: "3×1.5мм² (L+N+PE)",
     devices: "Фотореле, лампа",
+    connections: [
+      "В коробке: L(щиток) → L(фотореле)",
+      "В коробке: N(щиток) → N(лампа) (и на фотореле, если оно 3-проводное)",
+      "В коробке: выход фотореле (SW) → L(лампа)",
+      "В коробке: PE(щиток) → PE(лампа)",
+    ],
     Svg: SvgTwilightSwitch,
   },
   {
@@ -1052,6 +1160,12 @@ export const SCHEMES: WiringScheme[] = [
     category: "Комбинированные",
     cableInfo: "3×2.5мм² + 3×1.5мм²",
     devices: "Блок розетка+выключатель, лампа",
+    connections: [
+      "В коробке: L(щиток) → L(розетка) + L(выключатель)",
+      "В коробке: N(щиток) → N(розетка) + N(лампа)",
+      "В коробке: PE(щиток) → PE(розетка) + PE(лампа)",
+      "В коробке: SW(выключатель) → L(лампа)",
+    ],
     Svg: SvgSocketSwitch,
   },
 ]
