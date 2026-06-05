@@ -2,7 +2,7 @@
 
 import { useCalculatorStore } from '@/store/calculatorStore'
 import Link from 'next/link'
-import { PanelSvg } from '@/components/panel/PanelSvg'
+import { RealisticPanel } from '@/components/panel/RealisticPanel'
 import type { CircuitBreaker, RCD } from '@/types/electrical'
 import { cn } from '@/lib/utils'
 
@@ -55,10 +55,11 @@ export default function PanelPage() {
         </Link>
       </div>
 
-      {/* SVG-схема щитка */}
-      <div className="mb-8 overflow-x-auto rounded-xl border border-border bg-bg-elevated p-6">
-        <h2 className="mb-4 text-lg font-semibold font-display">Схема щитка</h2>
-        <PanelSvg result={result} />
+      {/* Схема щитка */}
+      <div className="mb-8 overflow-x-auto rounded-xl bg-transparent">
+        <h2 className="mb-4 text-lg font-semibold font-display">Схема щитка (Интерактивная)</h2>
+        <p className="mb-4 text-sm text-text-secondary">Автоматы можно менять местами перетаскиванием (Drag & Drop)</p>
+        <RealisticPanel result={result} />
       </div>
 
       {/* Спецификация */}
