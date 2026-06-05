@@ -16,47 +16,39 @@ interface PanelItem {
   sublabel: string
   modules: number
   phase?: PhaseId
-  rating: number // номинал в амперах
+  rating: number
   poles: number
 }
 
-// ─── РЕАЛИСТИЧНЫЙ КОМПОНЕНТ АВТОМАТА (HTML/CSS) ───
-function RealisticBreaker({ item }: { item: PanelItem }) {
-  const width = item.modules * MOD_W
+// Нумерация устройств: QS = рубильник, QF = автомат, F = УЗО, AD = диф
+function getDeviceRef(item: PanelItem, index: number): string {
+  if (item.type === 'load_break_switch') return 'QS1'
+  if (item.type === 'rcd') return 'F1'
+  if (item.type === 'diff_breaker') return 'AD1'
+  return `QF${index}` // сквозная нумерация автоматов
+}
 
-  // Русская маркировка типа
+// ─── РЕАЛИСТИЧНЫЙ АВТОМАТ ───
+function RealisticBreaker({ item, index }: { item: PanelItem; index: number }) {
+  const width = item.modules * MOD_W
+  const ref = getDeviceRef(item, index)
+
   let typeLabel = 'АВ'
   let toggleColor = 'bg-gray-800'
   let typeColor = 'text-gray-500'
 
-  if (item.type === 'main_breaker') {
-    typeLabel = 'АВ'
-    toggleColor = 'bg-gray-800'
-    typeColor = 'text-pink-600'
-  } else if (item.type === 'load_break_switch') {
-    typeLabel = 'РУБ'
-    toggleColor = 'bg-red-600'
-    typeColor = 'text-red-600'
-  } else if (item.type === 'rcd') {
-    typeLabel = 'УЗО'
-    toggleColor = 'bg-blue-600'
-    typeColor = 'text-blue-600'
-  } else if (item.type === 'diff_breaker') {
-    typeLabel = 'ДИФ'
-    toggleColor = 'bg-blue-700'
-    typeColor = 'text-blue-700'
-  } else {
-    typeLabel = 'АВ'
-    toggleColor = 'bg-gray-800'
-    typeColor = 'text-gray-500'
-  }
+  if (item.type === 'main_breaker') { typeLabel = 'АВ'; toggleColor = 'bg-gray-800'; typeColor = 'text-pink-600' }
+  else if (item.type === 'load_break_switch') { typeLabel = 'РУБ'; toggleColor = 'bg-red-600'; typeColor = 'text-red-600' }
+  else if (item.type === 'rcd') { typeLabel = 'УЗО'; toggleColor = 'bg-blue-600'; typeColor = 'text-blue-600' }
+  else if (item.type === 'diff_breaker') { typeLabel = 'ДИФ'; toggleColor = 'bg-blue-700'; typeColor = 'text-cyan-700' }
+  else { typeLabel = 'АВ'; toggleColor = 'bg-gray-800'; typeColor = 'text-gray-500' }
 
   return (
     <div
       className="relative flex flex-col items-center justify-between border-b-2 border-r-2 border-gray-400 bg-gradient-to-b from-gray-100 via-gray-50 to-gray-200 shadow-md cursor-grab active:cursor-grabbing hover:brightness-95 transition-all select-none"
       style={{ width, height: 150, borderRadius: '3px' }}
     >
-      {/* Верхняя клемма (вход — приходит от шины/вышестоящего аппарата) */}
+      {/* Верхняя клемма */}
       <div className="w-full h-4 bg-gray-300 border-b border-gray-400 flex justify-center items-center">
         {Array.from({ length: item.modules }).map((_, i) => (
           <div key={i} className="w-full flex justify-center">
@@ -65,19 +57,24 @@ function RealisticBreaker({ item }: { item: PanelItem }) {
         ))}
       </div>
 
-      {/* Маркировка фазы */}
+      {/* Номер QF */}
+      <div className="absolute top-0 right-0.5 text-[7px] font-bold text-gray-400">
+        {ref}
+      </div>
+
+      {/* Фаза */}
       {item.phase && (
         <div className="absolute top-5 left-1 text-[7px] font-bold text-gray-400">
           {item.phase}
         </div>
       )}
 
-      {/* Тип устройства (русский) */}
+      {/* Тип (русский) */}
       <div className={`mt-2 text-[9px] font-black tracking-widest uppercase ${typeColor}`}>
         {typeLabel}
       </div>
 
-      {/* Рычажок (Toggle) */}
+      {/* Рычажок */}
       <div className="flex-1 flex items-center justify-center w-full">
         {Array.from({ length: item.modules }).map((_, i) => (
           <div key={i} className="w-full flex justify-center">
@@ -98,7 +95,7 @@ function RealisticBreaker({ item }: { item: PanelItem }) {
         </div>
       </div>
 
-      {/* Нижняя клемма (выход — к нагрузке) */}
+      {/* Нижняя клемма */}
       <div className="w-full h-4 bg-gray-300 border-t border-gray-400 flex justify-center items-center">
         {Array.from({ length: item.modules }).map((_, i) => (
           <div key={i} className="w-full flex justify-center">
@@ -110,8 +107,8 @@ function RealisticBreaker({ item }: { item: PanelItem }) {
   )
 }
 
-// ─── СОРТИРУЕМЫЙ ЭЛЕМЕНТ (ОБЕРТКА DND-KIT) ───
-function SortableBreaker({ item }: { item: PanelItem }) {
+// ─── СОРТИРУЕМЫЙ ЭЛЕМЕНТ ───
+function SortableBreaker({ item, index }: { item: PanelItem; index: number }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: item.id })
 
   const style = {
@@ -122,102 +119,130 @@ function SortableBreaker({ item }: { item: PanelItem }) {
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <RealisticBreaker item={item} />
+      <RealisticBreaker item={item} index={index} />
     </div>
   )
 }
 
-// ─── ШИНЫ L/N/PE ПОД РЯДОМ АВТОМАТОВ ───
+// ─── СОЕДИНИТЕЛЬНЫЕ ПРОВОДА + ШИНЫ ───
 function BusBars({ items, supplyPhases }: { items: PanelItem[]; supplyPhases: 1 | 3 }) {
   const totalWidth = items.reduce((sum, item) => sum + item.modules * MOD_W, 0)
-
-  // Определяем, какие фазы присутствуют
   const is3Phase = supplyPhases === 3
-  const phaseColors = {
-    L1: 'bg-red-500',
-    L2: 'bg-amber-500',
-    L3: 'bg-purple-500',
-    N: 'bg-sky-500',
-    PE: 'bg-yellow-500'
+
+  const phaseColors: Record<string, string> = {
+    L1: '#e74c3c',
+    L2: '#f39c12',
+    L3: '#9b59b6',
+    N: '#3498db',
+    PE: '#f1c40f'
+  }
+
+  // Для каждого модуля определяем цвет фазы
+  function getPhaseColor(item: PanelItem): string {
+    if (item.phase?.includes('L1')) return phaseColors.L1
+    if (item.phase?.includes('L2')) return phaseColors.L2
+    if (item.phase?.includes('L3')) return phaseColors.L3
+    return '#e74c3c' // default L
   }
 
   return (
-    <div className="relative" style={{ width: totalWidth, height: 36 }}>
-      {/* Фазные шины L1/L2/L3 */}
-      <div className="flex gap-[1px] w-full">
-        {items.map(item => {
-          const w = item.modules * MOD_W
-          let phaseColor = 'bg-gray-300'
-          if (item.phase?.includes('L1')) phaseColor = phaseColors.L1
-          else if (item.phase?.includes('L2')) phaseColor = phaseColors.L2
-          else if (item.phase?.includes('L3')) phaseColor = phaseColors.L3
-          
-          return (
-            <div
-              key={item.id + '-L'}
-              className={`h-2 ${phaseColor} border-l border-r border-gray-400`}
-              style={{ width: w }}
-            />
-          )
+    <div className="relative" style={{ width: totalWidth, height: 70 }}>
+      <svg width={totalWidth} height={70} className="absolute inset-0">
+        {/* Вертикальные соединительные провода от каждого модуля */}
+        {items.map((item, itemIdx) => {
+          const xStart = items.slice(0, itemIdx).reduce((s, i) => s + i.modules * MOD_W, 0)
+          const phaseColor = getPhaseColor(item)
+
+          // Для каждого полюса модуля — вертикальная линия
+          const wires: React.ReactNode[] = []
+          for (let pole = 0; pole < item.modules; pole++) {
+            const x = xStart + pole * MOD_W + MOD_W / 2
+            wires.push(
+              <g key={`${item.id}-wires-${pole}`}>
+                {/* Фазный провод L — от модуля к шине */}
+                {(item.modules === 1 || pole === 0) && (
+                  <line x1={x} y1={2} x2={x} y2={12} stroke={phaseColor} strokeWidth={1.5} strokeLinecap="round" />
+                )}
+                {/* N (нулевой) провод — если устройство 2P+ */}
+                {item.modules >= 2 && pole === 1 && (
+                  <line x1={x} y1={2} x2={x} y2={12} stroke={phaseColors.N} strokeWidth={1.5} strokeLinecap="round" />
+                )}
+                {/* PE провод — всегда в первом полюсе */}
+                {pole === 0 && (
+                  <line x1={x + 3} y1={2} x2={x + 3} y2={12} stroke={phaseColors.PE} strokeWidth={1} strokeLinecap="round" strokeDasharray="2,1" />
+                )}
+              </g>
+            )
+          }
+          return wires
         })}
-      </div>
 
-      {/* Нулевая шина (N) — под фазной */}
-      <div className="flex gap-[1px] w-full mt-[2px]">
-        {items.map(item => (
-          <div
-            key={item.id + '-N'}
-            className={`h-2 ${phaseColors.N} border-l border-r border-gray-400`}
-            style={{ width: item.modules * MOD_W }}
-          />
-        ))}
-      </div>
+        {/* Горизонтальные шины (гребёнка) */}
+        {(() => {
+          const rowW = totalWidth
+          const L_y = 14
+          const N_y = 20
+          const PE_y = 26
 
-      {/* PE шина (заземление) — отдельный ряд */}
-      <div className="flex gap-[1px] w-full mt-[2px]">
-        {items.map(item => (
-          <div
-            key={item.id + '-PE'}
-            className={`h-2 ${phaseColors.PE} border-l border-r border-gray-400`}
-            style={{ width: item.modules * MOD_W }}
-          />
-        ))}
-      </div>
+          // Для каждой позиции под модулем рисуем цветной сегмент
+          let pos = 0
+          const segments: { x: number; w: number; color: string; y: number }[] = []
+          for (const item of items) {
+            const phaseColor = getPhaseColor(item)
+            // L-шина под каждым модулем
+            segments.push({ x: pos, w: item.modules * MOD_W, color: phaseColor, y: L_y })
+            segments.push({ x: pos, w: item.modules * MOD_W, color: phaseColors.N, y: N_y })
+            segments.push({ x: pos, w: item.modules * MOD_W, color: phaseColors.PE, y: PE_y })
+            pos += item.modules * MOD_W
+          }
+          return segments.map((seg, i) => (
+            <rect key={`seg-${i}`} x={seg.x} y={seg.y} width={seg.w} height={4} fill={seg.color} rx={1} opacity={0.85} />
+          ))
+        })()}
+
+        {/* Горизонтальные линии по всей длине (главная магистраль) */}
+        <line x1={0} x2={totalWidth} y1={16} y2={16} stroke={is3Phase ? '#e74c3c' : '#e74c3c'} strokeWidth={1} opacity={0.3} />
+        <line x1={0} x2={totalWidth} y1={22} y2={22} stroke="#3498db" strokeWidth={1} opacity={0.3} />
+        <line x1={0} x2={totalWidth} y1={28} y2={28} stroke="#f1c40f" strokeWidth={1} opacity={0.3} />
+      </svg>
 
       {/* Подписи шин */}
-      <div className="flex justify-between mt-1 w-full">
-        <div className="flex gap-2 text-[7px] text-gray-500">
-          {is3Phase ? (
-            <>
-              <span className="text-red-600 font-bold">L1</span>
-              <span className="text-amber-600 font-bold">L2</span>
-              <span className="text-purple-600 font-bold">L3</span>
-            </>
-          ) : (
-            <span className="text-red-600 font-bold">L</span>
-          )}
-          <span className="text-sky-600 font-bold">N</span>
-          <span className="text-yellow-600 font-bold">PE</span>
-        </div>
+      <div className="absolute bottom-0 left-0 flex gap-3 text-[8px]">
+        {is3Phase ? (
+          <>
+            <span className="text-[#e74c3c] font-bold">L1</span>
+            <span className="text-[#f39c12] font-bold">L2</span>
+            <span className="text-[#9b59b6] font-bold">L3</span>
+          </>
+        ) : (
+          <span className="text-[#e74c3c] font-bold">L</span>
+        )}
+        <span className="text-[#3498db] font-bold">N</span>
+        <span className="text-[#f1c40f] font-bold">PE</span>
       </div>
     </div>
   )
 }
 
 // ─── ГЛАВНЫЙ КОМПОНЕНТ ЩИТКА ───
-export function RealisticPanel({ result }: { result: CalculationResult }) {
-  // Инициализация элементов
+export function RealisticPanel({
+  result,
+  onOrderChange,
+}: {
+  result: CalculationResult
+  onOrderChange?: (orderedIds: string[]) => void
+}) {
   const [items, setItems] = useState<PanelItem[]>([])
 
   useEffect(() => {
     const newItems: PanelItem[] = []
 
-    // Рубильник (если есть)
+    // Рубильник
     if (result.loadBreakSwitch) {
       newItems.push({
         id: result.loadBreakSwitch.id,
         type: 'load_break_switch',
-        label: 'Рубильник',
+        label: result.loadBreakSwitch.group,
         sublabel: `${result.loadBreakSwitch.rating}А`,
         modules: result.loadBreakSwitch.modules,
         phase: result.loadBreakSwitch.phase,
@@ -226,7 +251,7 @@ export function RealisticPanel({ result }: { result: CalculationResult }) {
       })
     }
 
-    // Вводной автомат
+    // Вводной
     newItems.push({
       id: result.mainBreaker.id,
       type: 'main_breaker',
@@ -238,12 +263,10 @@ export function RealisticPanel({ result }: { result: CalculationResult }) {
       poles: result.mainBreaker.poles,
     })
 
-    // Остальные устройства (УЗО + автоматы)
+    // УЗО + автоматы
     for (const d of result.devices) {
       if (d.id === 'main' || d.id === 'load_break') continue
-
       const isRcd = d.type === 'rcd' || d.type === 'diff_breaker'
-
       newItems.push({
         id: d.id,
         type: d.type,
@@ -259,6 +282,8 @@ export function RealisticPanel({ result }: { result: CalculationResult }) {
     }
 
     setItems(newItems)
+    // Уведомить родителя о начальном порядке
+    onOrderChange?.(newItems.map(i => i.id))
   }, [result])
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -267,16 +292,18 @@ export function RealisticPanel({ result }: { result: CalculationResult }) {
       setItems((items) => {
         const oldIndex = items.findIndex((i) => i.id === active.id)
         const newIndex = items.findIndex((i) => i.id === over?.id)
-        return arrayMove(items, oldIndex, newIndex)
+        const newItems = arrayMove(items, oldIndex, newIndex)
+        // Уведомить родителя о новом порядке
+        onOrderChange?.(newItems.map(i => i.id))
+        return newItems
       })
     }
   }
 
-  // Разбиваем items на DIN-рейки (по 12 модулей максимум)
+  // Разбивка по DIN-рейкам (12 модулей)
   const rows: PanelItem[][] = []
   let currentRow: PanelItem[] = []
   let currentMods = 0
-
   for (const item of items) {
     if (currentMods + item.modules > 12) {
       rows.push(currentRow)
@@ -290,40 +317,50 @@ export function RealisticPanel({ result }: { result: CalculationResult }) {
 
   const actualModules = items.reduce((sum, i) => sum + i.modules, 0)
 
+  // Сквозной индекс для нумерации QF
+  let qfIndex = 1
+  const getIndex = (item: PanelItem): number => {
+    if (item.type === 'load_break_switch') return 0
+    if (item.type === 'rcd') return 0
+    if (item.type === 'diff_breaker') return 0
+    return qfIndex++
+  }
+
   return (
-    <div className="p-8 bg-[#d1d5db] rounded-lg border-4 border-gray-400 shadow-2xl max-w-[600px] mx-auto">
+    <div className="p-8 bg-[#9098a0] rounded-lg border-4 border-gray-500 shadow-2xl max-w-[700px] mx-auto">
+      {/* Заголовок щитка */}
       <div className="text-center font-bold mb-2 tracking-widest">
-        <div className="text-gray-600 text-xs">РАСПРЕДЕЛИТЕЛЬНЫЙ ЩИТ</div>
-        <div className="text-gray-500 text-[10px] font-normal tracking-normal">
+        <div className="text-white text-xs bg-gray-700 inline-block px-4 py-0.5 rounded">РАСПРЕДЕЛИТЕЛЬНЫЙ ЩИТ</div>
+        <div className="text-gray-200 text-[10px] font-normal tracking-normal mt-1">
           {result.supplyPhases === 3 ? '3 фазы' : '1 фаза'} · {actualModules} модулей · щит {result.recommendedPanelModules} мест ({result.panelRows} ряда)
         </div>
       </div>
 
       <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <div className="flex flex-col gap-12">
+        <div className="flex flex-col gap-10">
           {rows.map((row, rowIndex) => (
             <div key={rowIndex} className="relative w-full flex flex-col items-center">
-              
-              {/* Реалистичная DIN-рейка (фон) */}
-              <div className="absolute top-[30px] w-[calc(100%-20px)] h-8 bg-gradient-to-b from-gray-400 via-gray-200 to-gray-400 border border-gray-500 shadow-sm z-0">
-                {/* Перфорация DIN-рейки */}
-                <div className="w-full h-full flex justify-between items-center px-4 opacity-30">
-                  {Array.from({ length: 24 }).map((_, i) => (
-                    <div key={i} className="w-2 h-4 bg-gray-600 rounded-sm"></div>
+
+              {/* DIN-рейка */}
+              <div className="absolute top-[30px] w-[calc(100%-10px)] h-7 bg-gradient-to-b from-gray-400 via-gray-200 to-gray-400 border border-gray-500 shadow-sm z-0">
+                <div className="w-full h-full flex justify-between items-center px-2 opacity-25">
+                  {Array.from({ length: 28 }).map((_, i) => (
+                    <div key={i} className="w-1.5 h-3 bg-gray-600 rounded-sm"></div>
                   ))}
                 </div>
               </div>
 
-              {/* Контейнер автоматов */}
+              {/* Автоматы */}
               <div className="relative z-10 flex w-full max-w-[408px] justify-start items-center">
                 <SortableContext items={row.map(i => i.id)} strategy={horizontalListSortingStrategy}>
-                  {row.map(item => (
-                    <SortableBreaker key={item.id} item={item} />
-                  ))}
+                  {row.map(item => {
+                    const idx = getIndex(item)
+                    return <SortableBreaker key={item.id} item={item} index={idx} />
+                  })}
                 </SortableContext>
               </div>
 
-              {/* Шины L/N/PE под автоматами */}
+              {/* Шины + соединения */}
               <div className="relative z-10 mt-0 flex w-full max-w-[408px] justify-start">
                 <BusBars items={row} supplyPhases={result.supplyPhases} />
               </div>

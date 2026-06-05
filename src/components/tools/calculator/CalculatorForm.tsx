@@ -348,6 +348,59 @@ export default function CalculatorForm() {
             </select>
           </div>
         </div>
+
+        {/* Мастер-выключатель */}
+        <div className="mt-4 rounded-xl border border-border bg-bg-elevated p-4">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 items-center">
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={!!input.useMasterSwitch}
+                  onChange={e => setInput({ useMasterSwitch: e.target.checked })}
+                  className="sr-only peer"
+                />
+                <div className="w-9 h-5 bg-gray-300 rounded-full peer peer-checked:bg-accent-amber peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all" />
+              </label>
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-text-primary">Мастер-выключатель (рубильник)</h3>
+              <p className="mt-1 text-xs text-text-muted">
+                Выключатель нагрузки перед вводным автоматом — для полного обесточивания щита при обслуживании.
+                Автоматически добавляется при вводном токе &gt;25А, но можно включить принудительно.
+              </p>
+              {input.useMasterSwitch && input.rooms && input.rooms.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  <p className="text-xs font-medium text-text-secondary">Группы, обесточиваемые мастер-выключателем:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {input.rooms.map(room => {
+                      const isSelected = input.masterSwitchGroups?.includes(room.id)
+                      return (
+                        <button
+                          key={room.id}
+                          onClick={() => {
+                            const current = input.masterSwitchGroups ?? []
+                            const next = isSelected
+                              ? current.filter(id => id !== room.id)
+                              : [...current, room.id]
+                            setInput({ masterSwitchGroups: next })
+                          }}
+                          className={`rounded-md border px-2.5 py-1 text-[11px] transition-all ${
+                            isSelected
+                              ? 'border-accent-amber bg-accent-amber/10 text-accent-amber'
+                              : 'border-border bg-bg-surface text-text-muted hover:border-border-accent'
+                          }`}
+                        >
+                          {room.name}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </section>
 
       {/* ШАГ 2: Помещения */}

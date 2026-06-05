@@ -1,17 +1,102 @@
 'use client'
 
+import { useState, useMemo } from 'react'
 import { useCalculatorStore } from '@/store/calculatorStore'
 import Link from 'next/link'
 import { RealisticPanel } from '@/components/panel/RealisticPanel'
-import type { CircuitBreaker, RCD } from '@/types/electrical'
-import { cn } from '@/lib/utils'
+import type { CircuitBreaker, RCD, LoadBreakSwitch, CalculationResult } from '@/types/electrical'
 
 function isRCD(d: CircuitBreaker | RCD): d is RCD {
   return 'leakageMA' in d
 }
 
+/** Единая строка спецификации */
+interface SpecRow {
+  id: string
+  ref: string       // QF1, QF2, F1, AD1, QS1
+  type: string
+  group: string
+  rating: string
+  phase: string
+  modules: number
+}
+
+/** Формируем строки спецификации в порядке щитка */
+function buildSpec(inOrderIds: string[], result: CalculationResult): SpecRow[] {
+  const { mainBreaker, loadBreakSwitch, devices } = result
+
+  // Индексация по id
+  const byId = new Map<string, CircuitBreaker | RCD | LoadBreakSwitch>()
+  byId.set(mainBreaker.id, mainBreaker)
+  if (loadBreakSwitch) byId.set(loadBreakSwitch.id, loadBreakSwitch)
+  for (const d of devices) byId.set(d.id, d)
+
+  let qfIndex = 1
+  const rows: SpecRow[] = []
+
+  for (const id of inOrderIds) {
+    const d = byId.get(id)
+    if (!d) continue
+
+    if ('type' in d && d.type === 'load_break_switch') {
+      const ls = d as LoadBreakSwitch
+      rows.push({
+        id: ls.id, ref: 'QS1', type: 'Рубильник',
+        group: ls.group,
+        rating: `${ls.rating}А / ${ls.poles}P`,
+        phase: ls.phase || '—',
+        modules: ls.modules,
+      })
+    } else if (isRCD(d as CircuitBreaker | RCD)) {
+      const r = d as RCD
+      const ref = r.type === 'diff_breaker' ? 'AD1' : 'F1'
+      rows.push({
+        id: r.id, ref, type: r.type === 'diff_breaker' ? 'Диф' : 'УЗО',
+        group: r.protectedGroups.join(', '),
+        rating: `${r.ratingAmps}А / ${r.leakageMA}мА`,
+        phase: r.phase || '—',
+        modules: r.modules,
+      })
+    } else {
+      const b = d as CircuitBreaker
+      const ref = b.id === 'main' ? 'QF1' : `QF${qfIndex++}`
+      rows.push({
+        id: b.id, ref, type: b.id === 'main' ? 'Ввод' : 'Авт',
+        group: b.group,
+        rating: `${b.rating}А (${b.characteristic})`,
+        phase: b.phase || '—',
+        modules: b.modules,
+      })
+    }
+  }
+
+  return rows
+}
+
+/** Цвета строк по типу устройства */
+function rowStyle(type: string): string {
+  switch (type) {
+    case 'Рубильник': return 'bg-yellow-50 dark:bg-yellow-950/20'
+    case 'Ввод': return 'bg-pink-50 dark:bg-pink-950/20'
+    case 'УЗО': return 'bg-orange-50 dark:bg-orange-950/20'
+    case 'Диф': return 'bg-cyan-50 dark:bg-cyan-950/20'
+    default: return ''
+  }
+}
+
+function typeTag(type: string): { bg: string; border: string; text: string } {
+  switch (type) {
+    case 'Рубильник': return { bg: 'bg-yellow-100', border: 'border-yellow-300', text: 'text-yellow-800' }
+    case 'Ввод': return { bg: 'bg-pink-100', border: 'border-pink-300', text: 'text-pink-800' }
+    case 'УЗО': return { bg: 'bg-orange-100', border: 'border-orange-300', text: 'text-orange-800' }
+    case 'Диф': return { bg: 'bg-cyan-100', border: 'border-cyan-300', text: 'text-cyan-800' }
+    default: return { bg: 'bg-blue-100', border: 'border-blue-300', text: 'text-blue-800' }
+  }
+}
+
 export default function PanelPage() {
   const result = useCalculatorStore(s => s.result)
+  const [panelOrder, setPanelOrder] = useState<string[]>([])
 
   if (!result) {
     return (
@@ -30,12 +115,20 @@ export default function PanelPage() {
     )
   }
 
-  const { mainBreaker, loadBreakSwitch, devices, recommendedPanelModules, panelRows, supplyPhases, warnings, notes } = result
+  const { recommendedPanelModules, panelRows, supplyPhases, warnings, notes } = result
 
-  // Сортировка устройств для сводки
-  const rcds = devices.filter(d => d.type === 'rcd') as RCD[]
-  const diffDevices = devices.filter(d => d.type === 'diff_breaker') as RCD[]
-  const groupBreakers = devices.filter(d => d.type === 'circuit_breaker' && d.id !== 'main') as CircuitBreaker[]
+  // Строим спецификацию в порядке щитка (или дефолтном, если ещё не получен)
+  const specRows = useMemo(() => {
+    if (panelOrder.length > 0) return buildSpec(panelOrder, result)
+    // Дефолтный порядок до получения из панели
+    const defaultOrder: string[] = []
+    if (result.loadBreakSwitch) defaultOrder.push(result.loadBreakSwitch.id)
+    defaultOrder.push(result.mainBreaker.id)
+    for (const d of result.devices) {
+      if (d.id !== 'main' && d.id !== 'load_break') defaultOrder.push(d.id)
+    }
+    return buildSpec(defaultOrder, result)
+  }, [panelOrder, result])
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12">
@@ -58,17 +151,20 @@ export default function PanelPage() {
       {/* Схема щитка */}
       <div className="mb-8 overflow-x-auto rounded-xl bg-transparent">
         <h2 className="mb-4 text-lg font-semibold font-display">Схема щитка (Интерактивная)</h2>
-        <p className="mb-4 text-sm text-text-secondary">Автоматы можно менять местами перетаскиванием (Drag & Drop)</p>
-        <RealisticPanel result={result} />
+        <p className="mb-4 text-sm text-text-secondary">
+          Перетаскивайте элементы для изменения порядка. Номера в спецификации синхронизируются.
+        </p>
+        <RealisticPanel result={result} onOrderChange={setPanelOrder} />
       </div>
 
-      {/* Спецификация */}
+      {/* Спецификация (по порядку щитка) */}
       <div className="mb-8 rounded-xl border border-border bg-bg-elevated p-6">
         <h2 className="mb-4 text-lg font-semibold font-display">Спецификация</h2>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border text-left text-xs uppercase text-text-muted">
+                <th className="px-3 py-2 w-10">№</th>
                 <th className="px-3 py-2">Тип</th>
                 <th className="px-3 py-2">Группа</th>
                 <th className="px-3 py-2">Номинал</th>
@@ -77,74 +173,23 @@ export default function PanelPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {/* Рубильник */}
-              {loadBreakSwitch && (
-                <tr className="bg-yellow-50 dark:bg-yellow-950/20">
-                  <td className="px-3 py-2.5">
-                    <span className="rounded-md border border-yellow-300 bg-yellow-100 px-2 py-0.5 text-[11px] text-yellow-800 dark:border-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300">
-                      Рубильник
-                    </span>
-                  </td>
-                  <td className="px-3 py-2.5">{loadBreakSwitch.group}</td>
-                  <td className="px-3 py-2.5">{loadBreakSwitch.rating}А</td>
-                  <td className="px-3 py-2.5 text-[11px] text-text-muted">{loadBreakSwitch.phase || '—'}</td>
-                  <td className="px-3 py-2.5">{loadBreakSwitch.modules}</td>
-                </tr>
-              )}
-              {/* Вводной */}
-              <tr className="bg-pink-50 dark:bg-pink-950/20">
-                <td className="px-3 py-2.5">
-                  <span className="rounded-md border border-pink-300 bg-pink-100 px-2 py-0.5 text-[11px] text-pink-800 dark:border-pink-700 dark:bg-pink-900/30 dark:text-pink-300">
-                    Ввод
-                  </span>
-                </td>
-                <td className="px-3 py-2.5">{mainBreaker.group}</td>
-                <td className="px-3 py-2.5">{mainBreaker.rating}А</td>
-                <td className="px-3 py-2.5 text-[11px] text-text-muted">{mainBreaker.phase || '—'}</td>
-                <td className="px-3 py-2.5">{mainBreaker.modules}</td>
-              </tr>
-              {/* УЗО */}
-              {rcds.map(r => (
-                <tr key={r.id} className="bg-orange-50 dark:bg-orange-950/20">
-                  <td className="px-3 py-2.5">
-                    <span className="rounded-md border border-orange-300 bg-orange-100 px-2 py-0.5 text-[11px] text-orange-800 dark:border-orange-700 dark:bg-orange-900/30 dark:text-orange-300">
-                      УЗО
-                    </span>
-                  </td>
-                  <td className="px-3 py-2.5">{r.protectedGroups.join(', ')}</td>
-                  <td className="px-3 py-2.5">{r.ratingAmps}А / {r.leakageMA}мА</td>
-                  <td className="px-3 py-2.5 text-[11px] text-text-muted">{r.phase || '—'}</td>
-                  <td className="px-3 py-2.5">{r.modules}</td>
-                </tr>
-              ))}
-              {/* Дифы */}
-              {diffDevices.map(d => (
-                <tr key={d.id} className="bg-red-50 dark:bg-red-950/20">
-                  <td className="px-3 py-2.5">
-                    <span className="rounded-md border border-red-300 bg-red-100 px-2 py-0.5 text-[11px] text-red-800 dark:border-red-700 dark:bg-red-900/30 dark:text-red-300">
-                      Диф
-                    </span>
-                  </td>
-                  <td className="px-3 py-2.5">{d.protectedGroups.join(', ')}</td>
-                  <td className="px-3 py-2.5">{d.ratingAmps}А / {d.leakageMA}мА</td>
-                  <td className="px-3 py-2.5 text-[11px] text-text-muted">{d.phase || '—'}</td>
-                  <td className="px-3 py-2.5">{d.modules}</td>
-                </tr>
-              ))}
-              {/* Групповые */}
-              {groupBreakers.map(b => (
-                <tr key={b.id}>
-                  <td className="px-3 py-2.5">
-                    <span className="rounded-md border border-blue-300 bg-blue-100 px-2 py-0.5 text-[11px] text-blue-800 dark:border-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-                      Авт
-                    </span>
-                  </td>
-                  <td className="px-3 py-2.5">{b.group}</td>
-                  <td className="px-3 py-2.5">{b.rating}А</td>
-                  <td className="px-3 py-2.5 text-[11px] text-text-muted">{b.phase || '—'}</td>
-                  <td className="px-3 py-2.5">{b.modules}</td>
-                </tr>
-              ))}
+              {specRows.map(row => {
+                const tag = typeTag(row.type)
+                return (
+                  <tr key={row.id} className={rowStyle(row.type)}>
+                    <td className="px-3 py-2.5 text-[11px] font-mono font-bold text-text-muted">{row.ref}</td>
+                    <td className="px-3 py-2.5">
+                      <span className={`rounded-md border ${tag.border} ${tag.bg} px-2 py-0.5 text-[11px] ${tag.text}`}>
+                        {row.type}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2.5">{row.group}</td>
+                    <td className="px-3 py-2.5">{row.rating}</td>
+                    <td className="px-3 py-2.5 text-[11px] text-text-muted">{row.phase}</td>
+                    <td className="px-3 py-2.5">{row.modules}</td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
@@ -165,11 +210,15 @@ export default function PanelPage() {
                   <div className={`mb-1 font-bold ${phaseColor}`}>{phase}</div>
                   <div className="space-y-1">
                     {phaseDevices.length === 0 && <span className="text-text-muted">—</span>}
-                    {phaseDevices.map(a => (
-                      <div key={a.deviceId} className="text-[12px] text-text-secondary">
-                        {a.deviceId === 'main' ? 'Вводной' : a.deviceId === 'load_break' ? 'Рубильник' : a.deviceId}
-                      </div>
-                    ))}
+                    {phaseDevices.map(a => {
+                      // Найти ref для этого устройства
+                      const row = specRows.find(r => r.id === a.deviceId)
+                      return (
+                        <div key={a.deviceId} className="text-[12px] text-text-secondary">
+                          {row?.ref || a.deviceId}
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
               )

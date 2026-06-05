@@ -15,14 +15,25 @@ import { selectBreakerModules } from '@/lib/calculations/panel'
  * 
  * 1-фазные сети: 2P рубильник (L+N)
  * 3-фазные сети: 4P рубильник (L1+L2+L3+N)
+ * 
+ * Автоматическая логика: если вводной >25А или пользователь явно запросил — ставим.
  */
-function selectLoadBreakSwitch(phases: 1 | 3, meterAmps: 25 | 32 | 40 | 50 | 63): LoadBreakSwitch | undefined {
-  // Рубильник ставится НЕ всегда. Если вводной ≤ 25А — можно без рубильника.
-  if (meterAmps <= 25) return undefined
+function selectLoadBreakSwitch(
+  phases: 1 | 3,
+  meterAmps: number,
+  useMasterSwitch?: boolean,
+  masterSwitchGroups?: string[]
+): LoadBreakSwitch | undefined {
+  // Ставим только если >25А ИЛИ пользователь явно выбрал
+  if (meterAmps <= 25 && !useMasterSwitch) return undefined
 
   const poles = phases === 3 ? 4 : 2
   const modules = selectBreakerModules(poles)
   const phaseIds: Record<1 | 3, PhaseId> = { 1: 'L1,N', 3: 'L1,L2,L3,N' }
+
+  const groupName = masterSwitchGroups && masterSwitchGroups.length > 0
+    ? `Рубильник (управляет: ${masterSwitchGroups.join(', ')})`
+    : 'Мастер-выключатель (весь щит)'
 
   return {
     id: 'load_break',
@@ -30,7 +41,7 @@ function selectLoadBreakSwitch(phases: 1 | 3, meterAmps: 25 | 32 | 40 | 50 | 63)
     rating: meterAmps as ExtendedRating,
     poles,
     modules,
-    group: 'Рубильник',
+    group: groupName,
     reason: `${meterAmps}А / ${poles}P — выключатель нагрузки для безопасного ` +
             `отключения щита при обслуживании. Ставится до счётчика/вводного автомата.`,
     phase: phaseIds[phases],
@@ -76,9 +87,9 @@ export function calculateAll(input: CalculationInput): CalculationResult {
   const notes: string[] = []
 
   // 1. Выключатель нагрузки (рубильник) — перед вводным
-  const loadBreakSwitch = selectLoadBreakSwitch(input.supplyPhases, input.meterAmps)
+  const loadBreakSwitch = selectLoadBreakSwitch(input.supplyPhases, input.meterAmps, input.useMasterSwitch, input.masterSwitchGroups)
   if (loadBreakSwitch) {
-    notes.push(`Рубильник ${loadBreakSwitch.rating}А/${loadBreakSwitch.poles}P — для безопасного отключения щита.`)
+    notes.push(`Мастер-выключатель ${loadBreakSwitch.rating}А/${loadBreakSwitch.poles}P — для безопасного отключения щита.`)
   }
 
   // 2. Вводной автомат
