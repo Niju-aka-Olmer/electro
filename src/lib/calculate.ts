@@ -1,29 +1,113 @@
 // src/lib/calculate.ts
 // Полный расчёт электроустановки: объединяет breakers + rcd + panel
 
-import type { CalculationInput, CalculationResult, CircuitBreaker, RCD } from '@/types/electrical'
+import type {
+  CalculationInput, CalculationResult, CircuitBreaker, RCD,
+  LoadBreakSwitch, PhaseId, ExtendedRating
+} from '@/types/electrical'
 import { calcMainBreaker, calcRoomBreakers } from '@/lib/calculations/breakers'
 import { generateRCDStrategy } from '@/lib/calculations/rcd'
 import { calculatePanel } from '@/lib/calculations/panel'
+import { selectBreakerModules } from '@/lib/calculations/panel'
+
+/**
+ * Подбирает выключатель нагрузки (рубильник/разъединитель) перед вводным автоматом.
+ * 
+ * 1-фазные сети: 2P рубильник (L+N)
+ * 3-фазные сети: 4P рубильник (L1+L2+L3+N)
+ */
+function selectLoadBreakSwitch(phases: 1 | 3, meterAmps: 25 | 32 | 40 | 50 | 63): LoadBreakSwitch | undefined {
+  // Рубильник ставится НЕ всегда. Если вводной ≤ 25А — можно без рубильника.
+  if (meterAmps <= 25) return undefined
+
+  const poles = phases === 3 ? 4 : 2
+  const modules = selectBreakerModules(poles)
+  const phaseIds: Record<1 | 3, PhaseId> = { 1: 'L1,N', 3: 'L1,L2,L3,N' }
+
+  return {
+    id: 'load_break',
+    type: 'load_break_switch',
+    rating: meterAmps as ExtendedRating,
+    poles,
+    modules,
+    group: 'Рубильник',
+    reason: `${meterAmps}А / ${poles}P — выключатель нагрузки для безопасного ` +
+            `отключения щита при обслуживании. Ставится до счётчика/вводного автомата.`,
+    phase: phaseIds[phases],
+  }
+}
+
+/**
+ * Распределяет однофазные автоматы по фазам L1/L2/L3 для равномерной нагрузки.
+ * 3-полюсные автоматы берут все три фазы.
+ * 1-полюсные автоматы равномерно распределяются: L1 → L2 → L3 → L1 → ...
+ * 2-полюсные (1P+N) автоматы распределяются как однофазные.
+ */
+function assignPhases(
+  mainBreaker: CircuitBreaker,
+  devices: (CircuitBreaker | RCD)[]
+): { deviceId: string; phase: PhaseId }[] {
+  const assignment: { deviceId: string; phase: PhaseId }[] = []
+  let phaseIndex = 0
+  const phases: PhaseId[] = ['L1', 'L2', 'L3']
+
+  // Вводной автомат: всегда все фазы
+  assignment.push({ deviceId: mainBreaker.id, phase: mainBreaker.poles === 3 ? 'L1,L2,L3' : 'L1,N' })
+
+  for (const d of devices) {
+    if (d.poles === 3 || d.poles === 4) {
+      assignment.push({ deviceId: d.id, phase: 'L1,L2,L3' })
+    } else if (d.type === 'rcd' && d.poles === 2) {
+      // УЗО на две фазы
+      assignment.push({ deviceId: d.id, phase: 'L1,N' })
+    } else {
+      // 1-полюсный: чередуем фазы
+      const phase = phases[phaseIndex % 3]
+      phaseIndex++
+      assignment.push({ deviceId: d.id, phase: d.poles === 1 ? phase as PhaseId : `${phase},N` as PhaseId })
+    }
+  }
+
+  return assignment
+}
 
 export function calculateAll(input: CalculationInput): CalculationResult {
   const warnings: string[] = []
   const notes: string[] = []
 
-  // 1. Вводной автомат
+  // 1. Выключатель нагрузки (рубильник) — перед вводным
+  const loadBreakSwitch = selectLoadBreakSwitch(input.supplyPhases, input.meterAmps)
+  if (loadBreakSwitch) {
+    notes.push(`Рубильник ${loadBreakSwitch.rating}А/${loadBreakSwitch.poles}P — для безопасного отключения щита.`)
+  }
+
+  // 2. Вводной автомат
   const mainBreaker = calcMainBreaker(input)
 
-  // 2. Групповые автоматы по комнатам
+  // 3. Групповые автоматы по комнатам
   const allBreakers: CircuitBreaker[] = input.rooms.flatMap(room => calcRoomBreakers(room))
 
-  // 3. Стратегия УЗО
+  // 4. Стратегия УЗО
   const rcdResult = generateRCDStrategy(input.rooms, allBreakers, input.bathroomStrategy ?? 'economy')
   const rcdDevices = rcdResult.devices
 
-  // 4. Расчёт щитка
+  // 5. Расчёт щитка
   const panelResult = calculatePanel(mainBreaker, allBreakers, rcdDevices)
 
-  // 5. Валидация и предупреждения
+  // 6. Фазное распределение (для 3-фазных сетей)
+  const allDevicesForPhasing: (CircuitBreaker | RCD)[] = [...rcdDevices, ...allBreakers]
+  const phaseAssignment = input.supplyPhases === 3
+    ? assignPhases(mainBreaker, allDevicesForPhasing)
+    : undefined
+
+  // Применяем фазы к самим устройствам
+  if (phaseAssignment) {
+    const phaseMap = new Map(phaseAssignment.map(a => [a.deviceId, a.phase]))
+    allDevicesForPhasing.forEach(d => { d.phase = phaseMap.get(d.id) })
+    mainBreaker.phase = phaseMap.get(mainBreaker.id)
+  }
+
+  // 7. Валидация и предупреждения
   if (input.rooms.length === 0) {
     warnings.push('Добавьте хотя бы одно помещение для расчёта.')
   }
@@ -49,7 +133,10 @@ export function calculateAll(input: CalculationInput): CalculationResult {
 
   return {
     mainBreaker,
+    loadBreakSwitch,
     devices: allDevices,
+    supplyPhases: input.supplyPhases,
+    phaseAssignment,
     totalModules: panelResult.totalModules,
     recommendedPanelModules: panelResult.withReserve,
     panelRows: panelResult.rows,

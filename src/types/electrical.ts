@@ -2,10 +2,29 @@
 // Доменные типы электрической системы
 
 export type BreakerCharacteristic = 'B' | 'C' | 'D'
-export type BreakerType = 'circuit_breaker' | 'rcd' | 'diff_breaker' | 'main_breaker'
+export type BreakerType = 'circuit_breaker' | 'rcd' | 'diff_breaker' | 'main_breaker' | 'load_break_switch'
 export type RCDCurrentRating = 10 | 25 | 40 | 63  // А
 export type RCDLeakageCurrent = 10 | 30 | 100 | 300 // мА
 export type BreakerRating = 6 | 10 | 16 | 20 | 25 | 32 | 40 | 50 | 63 // А
+export type ExtendedRating = BreakerRating | 80 | 100 | 125
+
+/** Фаза подключения устройства */
+export type PhaseId = 'L1' | 'L2' | 'L3' | 'L1,N' | 'L2,N' | 'L3,N' | 'L1,L2,L3' | 'L1,L2,L3,N'
+
+/** Типы DIN-рейка модулей для отображения */
+export type PanelDeviceCategory =
+  | 'main_breaker'
+  | 'load_break_switch'
+  | 'rcd'
+  | 'diff_breaker'
+  | 'group_breaker'
+  | 'spd'
+  | 'voltage_relay'
+  | 'contactor'
+  | 'meter'
+  | 'busbar'
+  | 'terminal'
+  | 'other'
 
 export type GroundingSystem = 'TN-C' | 'TN-S' | 'TN-C-S' | 'TT'
 export type InstallationType = 'apartment' | 'house'
@@ -22,6 +41,19 @@ export interface CircuitBreaker {
   modules: number // ширина в модулях (1 модуль = 17.5мм)
   group: string   // название группы ("Розетки кухня")
   reason: string  // обоснование выбора
+  phase?: PhaseId // фаза/фазы подключения (для 3-фазных сетей)
+}
+
+/** Выключатель нагрузки (рубильник) — разрывает цепь без защиты от КЗ */
+export interface LoadBreakSwitch {
+  id: string
+  type: 'load_break_switch'
+  rating: ExtendedRating
+  poles: 1 | 2 | 3 | 4
+  modules: number
+  group: string
+  reason: string
+  phase?: PhaseId
 }
 
 export interface RCD {
@@ -33,6 +65,7 @@ export interface RCD {
   modules: number
   protectedGroups: string[] // id групп под защитой
   reason: string
+  phase?: PhaseId
 }
 
 export interface ElectricalLoad {
@@ -67,8 +100,11 @@ export interface CalculationInput {
 
 export interface CalculationResult {
   mainBreaker: CircuitBreaker
-  inputRCD?: RCD            // вводное УЗО (если TN-C)
+  loadBreakSwitch?: LoadBreakSwitch  // рубильник перед вводным
+  inputRCD?: RCD                     // вводное УЗО (если TN-C)
   devices: (CircuitBreaker | RCD)[]
+  supplyPhases: 1 | 3
+  phaseAssignment?: { deviceId: string; phase: PhaseId }[]  // распределение по фазам
   totalModules: number
   recommendedPanelModules: number // с запасом 20%
   panelRows: number

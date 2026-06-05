@@ -20,6 +20,13 @@ const PANEL_SIZES = [12, 24, 36, 48, 60, 72] as const
 const MODULES_PER_ROW = 12 // для компактных щитков
 
 /**
+ * Подсчёт модулей по количеству полюсов
+ */
+export function selectBreakerModules(poles: number): number {
+  return poles // 1P=1, 2P=2, 3P=3, 4P=4
+}
+
+/**
  * Подсчёт модулей в устройстве
  */
 function getDeviceModules(device: CircuitBreaker | RCD): number {

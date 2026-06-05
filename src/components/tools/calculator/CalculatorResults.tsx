@@ -1,6 +1,7 @@
 'use client'
 
 import { useCalculatorStore } from '@/store/calculatorStore'
+import Link from 'next/link'
 import type { CircuitBreaker, RCD } from '@/types/electrical'
 import { cn } from '@/lib/utils'
 
@@ -98,6 +99,12 @@ export default function CalculatorResults() {
           >
             Сбросить
           </button>
+          <Link
+            href="/panel"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-accent-amber px-5 py-2 text-sm font-semibold text-white hover:bg-accent-amber/90"
+          >
+            Перенести в Щиток →
+          </Link>
         </div>
       </div>
 
