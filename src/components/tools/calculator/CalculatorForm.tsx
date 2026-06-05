@@ -340,11 +340,19 @@ export default function CalculatorForm() {
               onChange={e => setInput({ meterAmps: Number(e.target.value) as any })}
               className="w-full rounded-lg border border-border bg-bg-elevated px-3 py-2 text-sm text-text-primary outline-none focus:border-accent-amber"
             >
-              <option value={25}>25 А (5.5 кВт)</option>
-              <option value={32}>32 А (7 кВт)</option>
-              <option value={40}>40 А (8.8 кВт)</option>
-              <option value={50}>50 А (11 кВт)</option>
-              <option value={63}>63 А (13.9 кВт)</option>
+              {[25, 32, 40, 50, 63].map(amps => {
+                const is3Phase = input.supplyPhases === 3
+                const poles = is3Phase ? '3P' : '2P'
+                const voltage = is3Phase ? 400 : 220
+                const powerKW = is3Phase
+                  ? +(1.732 * voltage * amps / 1000).toFixed(1)
+                  : +(voltage * amps / 1000).toFixed(1)
+                return (
+                  <option key={amps} value={amps}>
+                    {amps} А ({poles}, {powerKW} кВт)
+                  </option>
+                )
+              })}
             </select>
           </div>
         </div>
