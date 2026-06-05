@@ -46,18 +46,15 @@ export function calculatePanel(
   const groupModules = groupBreakers.reduce((sum, b) => sum + getDeviceModules(b), 0)
   const rcdModules = rcdDevices.reduce((sum, r) => sum + getDeviceModules(r), 0)
   
-  // Нулевые шины: 1 модуль на каждые 12 групп
+  // Нулевые шины: 1 модуль на каждые 12 групп (НЕ входит в totalModules — это шина, не устройство)
   const neutralBusModules = Math.ceil(groupBreakers.length / 12)
   
-  // PE шина: обычно не на DIN-рейке, но считаем место
-  const peModules = 0
-  
-  const totalModules = mainModules + groupModules + rcdModules + neutralBusModules
+  // totalModules = только устройства на DIN-рейке
+  const totalModules = mainModules + groupModules + rcdModules
 
-  // Запас 20%, округлить вверх до кратного 12
-  const withReserveExact = totalModules * 1.2
-  const withReserve = Math.ceil(withReserveExact / 12) * 12
-
+  // Выбор ближайшего типового щитка: округление до 12 (1 ряд = 12 модулей)
+  // Для 10 модулей → 12 (1 ряд), для 13 → 24 (2 ряда) и т.д.
+  const withReserve = Math.ceil(totalModules / 12) * 12
   const rows = Math.ceil(withReserve / 12)
 
   // Определение типа щитка
@@ -92,10 +89,10 @@ export function calculatePanel(
   }
 
   const notes: string[] = [
-    `Итого устройств: ${totalModules} модулей`,
-    `С запасом 20%: ${withReserve} мест`,
-    `DIN-рейки: ${rows} шт. (по 12 модулей каждая)`,
-    `Нулевая шина: ${neutralBusModules} место(а) на рейке`,
+    `Устройства на DIN-рейке: ${totalModules} модулей`,
+    `Рекомендуемый щит: ${withReserve} мест (${rows} ряда по 12 модулей)`,
+    `DIN-рейки: ${rows} шт.`,
+    `Нулевая шина: ${neutralBusModules} шт. на рейке`,
     `PE шина — устанавливается отдельно на корпус щита`,
   ]
 
