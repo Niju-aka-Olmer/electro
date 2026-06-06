@@ -1,13 +1,15 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { DndContext, closestCenter, DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, useSortable, horizontalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import type { CalculationResult, CircuitBreaker, RCD, PhaseId } from '@/types/electrical'
 
 // ─── КОНСТАНТЫ ───
-const MOD_W = 34 // 1 модуль = 34px
+const MOD_W = 38 // ширина 1 модуля в пикселях (18мм DIN * ~2.1)
+const DEV_H = 158 // высота устройства
+const DIN_H = 7   // высота DIN-рейки
 
 interface PanelItem {
   id: string
@@ -17,214 +19,876 @@ interface PanelItem {
   modules: number
   phase?: PhaseId
   rating: number
+  character: string
   poles: number
 }
 
-// Нумерация устройств: QS = рубильник, QF = автомат, F = УЗО, AD = диф
 function getDeviceRef(item: PanelItem, index: number): string {
   if (item.type === 'load_break_switch') return 'QS1'
   if (item.type === 'rcd') return 'F1'
   if (item.type === 'diff_breaker') return 'AD1'
-  return `QF${index}` // сквозная нумерация автоматов
+  return `QF${index}`
 }
 
-// ─── РЕАЛИСТИЧНЫЙ АВТОМАТ ───
-function RealisticBreaker({ item, index }: { item: PanelItem; index: number }) {
-  const width = item.modules * MOD_W
-  const ref = getDeviceRef(item, index)
-
-  let typeLabel = 'АВ'
-  let toggleColor = 'bg-gray-800'
-  let typeColor = 'text-gray-500'
-
-  if (item.type === 'main_breaker') { typeLabel = 'АВ'; toggleColor = 'bg-gray-800'; typeColor = 'text-pink-600' }
-  else if (item.type === 'load_break_switch') { typeLabel = 'РУБ'; toggleColor = 'bg-red-600'; typeColor = 'text-red-600' }
-  else if (item.type === 'rcd') { typeLabel = 'УЗО'; toggleColor = 'bg-blue-600'; typeColor = 'text-blue-600' }
-  else if (item.type === 'diff_breaker') { typeLabel = 'ДИФ'; toggleColor = 'bg-blue-700'; typeColor = 'text-cyan-700' }
-  else { typeLabel = 'АВ'; toggleColor = 'bg-gray-800'; typeColor = 'text-gray-500' }
-
+// ─── SVG-ФИЛЬТРЫ (один раз для всех) ───
+function SvgDefs() {
   return (
-    <div
-      className="relative flex flex-col items-center justify-between border-b-2 border-r-2 border-gray-400 bg-gradient-to-b from-gray-100 via-gray-50 to-gray-200 shadow-md cursor-grab active:cursor-grabbing hover:brightness-95 transition-all select-none"
-      style={{ width, height: 150, borderRadius: '3px' }}
-    >
-      {/* Верхняя клемма */}
-      <div className="w-full h-4 bg-gray-300 border-b border-gray-400 flex justify-center items-center">
-        {Array.from({ length: item.modules }).map((_, i) => (
-          <div key={i} className="w-full flex justify-center">
-            <div className="w-3 h-3 rounded-full bg-gray-500 shadow-inner border border-gray-600 ring-1 ring-inset ring-gray-400/30"></div>
-          </div>
-        ))}
-      </div>
-
-      {/* Номер QF */}
-      <div className="absolute top-0 right-0.5 text-[7px] font-bold text-gray-400">
-        {ref}
-      </div>
-
-      {/* Фаза */}
-      {item.phase && (
-        <div className="absolute top-5 left-1 text-[7px] font-bold text-gray-400">
-          {item.phase}
-        </div>
-      )}
-
-      {/* Тип (русский) */}
-      <div className={`mt-2 text-[9px] font-black tracking-widest uppercase ${typeColor}`}>
-        {typeLabel}
-      </div>
-
-      {/* Рычажок */}
-      <div className="flex-1 flex items-center justify-center w-full">
-        {Array.from({ length: item.modules }).map((_, i) => (
-          <div key={i} className="w-full flex justify-center">
-            <div className={`w-5 h-8 ${toggleColor} rounded-sm border-b-4 border-gray-900 shadow-lg relative`}>
-              <div className="absolute top-1 left-1 w-3 h-1 bg-white/20 rounded-full"></div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Номинал */}
-      <div className="mb-1 text-center w-full px-1">
-        <div className="text-[10px] font-bold text-gray-800 leading-tight">
-          {item.rating}А
-        </div>
-        <div className="text-[7px] text-gray-500 leading-tight overflow-hidden text-ellipsis whitespace-nowrap max-w-full">
-          {item.label}
-        </div>
-      </div>
-
-      {/* Нижняя клемма */}
-      <div className="w-full h-4 bg-gray-300 border-t border-gray-400 flex justify-center items-center">
-        {Array.from({ length: item.modules }).map((_, i) => (
-          <div key={i} className="w-full flex justify-center">
-            <div className="w-3 h-3 rounded-full bg-gray-500 shadow-inner border border-gray-600 ring-1 ring-inset ring-gray-400/30"></div>
-          </div>
-        ))}
-      </div>
-    </div>
+    <defs>
+      {/* Тень корпуса */}
+      <filter id="body-shadow" x="-5%" y="-5%" width="110%" height="110%">
+        <feDropShadow dx={1} dy={2} stdDeviation={2} floodOpacity={0.15} />
+      </filter>
+      {/* Тень рычажка */}
+      <filter id="lever-shadow" x="-20%" y="-10%" width="140%" height="120%">
+        <feDropShadow dx={1} dy={1} stdDeviation={0.5} floodOpacity={0.25} />
+      </filter>
+      {/* Внутренняя тень */}
+      <filter id="inset-shadow">
+        <feOffset dx={0} dy={1} />
+        <feGaussianBlur stdDeviation={1} />
+        <feComposite operator="out" in="SourceGraphic" />
+        <feComponentTransfer><feFuncA type="linear" slope={0.12} /></feComponentTransfer>
+        <feBlend in="SourceGraphic" mode="normal" />
+      </filter>
+      {/* Тень клеммы */}
+      <radialGradient id="terminal-grad">
+        <stop offset="0%" stopColor="#eee" />
+        <stop offset="60%" stopColor="#bbb" />
+        <stop offset="100%" stopColor="#888" />
+      </radialGradient>
+      {/* Металл DIN-рейки */}
+      <linearGradient id="din-grad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor="#b0b0b0" />
+        <stop offset="30%" stopColor="#d4d4d4" />
+        <stop offset="50%" stopColor="#e8e8e8" />
+        <stop offset="70%" stopColor="#c8c8c8" />
+        <stop offset="100%" stopColor="#909090" />
+      </linearGradient>
+      {/* Градиент корпуса автомата */}
+      <linearGradient id="body-grad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor="#fafafa" />
+        <stop offset="50%" stopColor="#f0f0f0" />
+        <stop offset="100%" stopColor="#e2e2e2" />
+      </linearGradient>
+      {/* Градиент корпуса УЗО/Диф */}
+      <linearGradient id="body-rcd-grad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor="#f8f9ff" />
+        <stop offset="50%" stopColor="#eef0fa" />
+        <stop offset="100%" stopColor="#dee0ec" />
+      </linearGradient>
+      {/* Градиент корпуса рубильника */}
+      <linearGradient id="body-switch-grad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor="#fff8f0" />
+        <stop offset="50%" stopColor="#f5ede4" />
+        <stop offset="100%" stopColor="#e8ddd2" />
+      </linearGradient>
+      {/* Ручка автомата */}
+      <linearGradient id="handle-grad" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stopColor="#555" />
+        <stop offset="40%" stopColor="#333" />
+        <stop offset="100%" stopColor="#1a1a1a" />
+      </linearGradient>
+      {/* Красная ручка рубильника */}
+      <linearGradient id="handle-red-grad" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stopColor="#ff4444" />
+        <stop offset="40%" stopColor="#d32f2f" />
+        <stop offset="100%" stopColor="#b71c1c" />
+      </linearGradient>
+      {/* Синяя ручка УЗО */}
+      <linearGradient id="handle-blue-grad" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stopColor="#42a5f5" />
+        <stop offset="40%" stopColor="#1976d2" />
+        <stop offset="100%" stopColor="#0d47a1" />
+      </linearGradient>
+      {/* Тёмно-синяя ручка дифа */}
+      <linearGradient id="handle-darkblue-grad" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stopColor="#1e88e5" />
+        <stop offset="40%" stopColor="#0d47a1" />
+        <stop offset="100%" stopColor="#002171" />
+      </linearGradient>
+      {/* Вентиляция */}
+      <pattern id="vents" width="4" height="8" patternUnits="userSpaceOnUse">
+        <rect x="0" y="0" width="3" height="6" rx="1" fill="#ccc" />
+      </pattern>
+      {/* Гребёнка фазы */}
+      <linearGradient id="comb-L" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor="#e74c3c" />
+        <stop offset="100%" stopColor="#c0392b" />
+      </linearGradient>
+      <linearGradient id="comb-N" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor="#3498db" />
+        <stop offset="100%" stopColor="#2980b9" />
+      </linearGradient>
+      <linearGradient id="comb-PE" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor="#f1c40f" />
+        <stop offset="100%" stopColor="#d4ac0d" />
+      </linearGradient>
+    </defs>
   )
 }
 
-// ─── СОРТИРУЕМЫЙ ЭЛЕМЕНТ ───
-function SortableBreaker({ item, index }: { item: PanelItem; index: number }) {
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: item.id })
+// ─── КЛЕММА ───
+function Terminal({ cx, cy }: { cx: number; cy: number }) {
+  return (
+    <g>
+      <circle cx={cx} cy={cy} r={5} fill="url(#terminal-grad)" stroke="#999" strokeWidth={0.5} />
+      <line x1={cx - 2.5} y1={cy} x2={cx + 2.5} y2={cy} stroke="#666" strokeWidth={0.8} />
+    </g>
+  )
+}
+
+// ─── РЫЧАЖОК АВТОМАТА ───
+function BreakerLever({ cx, up, color, angle = 12 }: { cx: number; up: boolean; color: string; angle?: number }) {
+  const leverW = 7
+  const leverH = 38
+  const slotH = 32
+  const slotY = 32
+  const dir = up ? -angle : angle
+
+  return (
+    <g>
+      {/* Прорезь */}
+      <rect x={cx - leverW - 1} y={slotY - 2} width={leverW * 2 + 2} height={slotH + 4} rx={3} fill="#444" stroke="#333" strokeWidth={0.5} />
+      <rect x={cx - leverW} y={slotY - 1} width={leverW * 2} height={slotH + 2} rx={2} fill="#222" />
+      {/* Рычажок */}
+      <g filter="url(#lever-shadow)" transform={`rotate(${dir}, ${cx}, ${slotY + slotH / 2})`}>
+        <rect
+          x={cx - leverW / 2}
+          y={up ? slotY - leverH + slotH : slotY}
+          width={leverW}
+          height={leverH}
+          rx={3}
+          fill={color}
+          stroke="rgba(0,0,0,0.3)"
+          strokeWidth={0.5}
+        />
+        {/* Блик на рычажке */}
+        <rect
+          x={cx - leverW / 2 + 1.5}
+          y={up ? slotY - leverH + slotH + 2 : slotY + 2}
+          width={2}
+          height={leverH - 8}
+          rx={1}
+          fill="rgba(255,255,255,0.15)"
+        />
+      </g>
+    </g>
+  )
+}
+
+// ─── КНОПКА ТЕСТ УЗО ───
+function TestButton({ cx, cy }: { cx: number; cy: number }) {
+  return (
+    <g>
+      <circle cx={cx} cy={cy} r={5} fill="#e0e0e0" stroke="#999" strokeWidth={0.5} />
+      <circle cx={cx} cy={cy} r={3.5} fill="#4caf50" />
+      <text x={cx} y={cy + 1} textAnchor="middle" fontSize={5} fill="white" fontWeight="bold">T</text>
+    </g>
+  )
+}
+
+// ─── ИНДИКАТОР УЗО ───
+function StatusWindow({ cx, cy }: { cx: number; cy: number }) {
+  return (
+    <g>
+      <rect x={cx - 5} y={cy - 4} width={10} height={8} rx={1} fill="#fff" stroke="#bbb" strokeWidth={0.5} />
+      <rect x={cx - 4} y={cy - 3} width={8} height={6} rx={0.5} fill="#4caf50" opacity={0.7} />
+    </g>
+  )
+}
+
+// ─── ВЕНТИЛЯЦИЯ ───
+function Vents({ x, y, height }: { x: number; y: number; height: number }) {
+  const slots = Math.floor(height / 10)
+  return (
+    <g>
+      {Array.from({ length: slots }).map((_, i) => (
+        <rect
+          key={i}
+          x={x}
+          y={y + i * 10 + 2}
+          width={3}
+          height={6}
+          rx={1}
+          fill="none"
+          stroke="#ccc"
+          strokeWidth={0.8}
+        />
+      ))}
+    </g>
+  )
+}
+
+// ─── КОМПОНЕНТ УСТРОЙСТВА ───
+function DeviceSVG({ item, index }: { item: PanelItem; index: number }) {
+  const w = item.modules * MOD_W
+  const h = DEV_H
+  const cx = w / 2
+  const ref = getDeviceRef(item, index)
+
+  // Настройки в зависимости от типа
+  let config: {
+    bodyGrad: string
+    handleGrad: string
+    accentFill: string
+    typeText: string
+    showTestBtn: boolean
+    showIndicator: boolean
+    handleUp: boolean
+    bodyColor: string
+    labelColor: string
+  }
+
+  switch (item.type) {
+    case 'main_breaker':
+      config = {
+        bodyGrad: 'url(#body-grad)',
+        handleGrad: 'url(#handle-grad)',
+        accentFill: '#d32f2f',
+        typeText: 'АВ',
+        showTestBtn: false,
+        showIndicator: false,
+        handleUp: true,
+        bodyColor: '#f5f5f5',
+        labelColor: '#d32f2f',
+      }
+      break
+    case 'load_break_switch':
+      config = {
+        bodyGrad: 'url(#body-switch-grad)',
+        handleGrad: 'url(#handle-red-grad)',
+        accentFill: '#e65100',
+        typeText: 'РУБ',
+        showTestBtn: false,
+        showIndicator: false,
+        handleUp: true,
+        bodyColor: '#fff3e0',
+        labelColor: '#e65100',
+      }
+      break
+    case 'rcd':
+      config = {
+        bodyGrad: 'url(#body-rcd-grad)',
+        handleGrad: 'url(#handle-blue-grad)',
+        accentFill: '#1976d2',
+        typeText: 'УЗО',
+        showTestBtn: true,
+        showIndicator: true,
+        handleUp: true,
+        bodyColor: '#eef0fa',
+        labelColor: '#1976d2',
+      }
+      break
+    case 'diff_breaker':
+      config = {
+        bodyGrad: 'url(#body-rcd-grad)',
+        handleGrad: 'url(#handle-darkblue-grad)',
+        accentFill: '#00838f',
+        typeText: 'ДИФ',
+        showTestBtn: true,
+        showIndicator: true,
+        handleUp: true,
+        bodyColor: '#eef0fa',
+        labelColor: '#00838f',
+      }
+      break
+    default:
+      config = {
+        bodyGrad: 'url(#body-grad)',
+        handleGrad: 'url(#handle-grad)',
+        accentFill: '#555',
+        typeText: 'АВ',
+        showTestBtn: false,
+        showIndicator: false,
+        handleUp: true,
+        bodyColor: '#f5f5f5',
+        labelColor: '#555',
+      }
+  }
+
+  const moduleCenters = Array.from({ length: item.modules }).map((_, i) => i * MOD_W + MOD_W / 2)
+
+  return (
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} xmlns="http://www.w3.org/2000/svg">
+      {/* Корпус */}
+      <rect
+        x={1.5}
+        y={4}
+        width={w - 3}
+        height={h - 8}
+        rx={4}
+        ry={4}
+        fill={config.bodyGrad}
+        stroke="#bbb"
+        strokeWidth={0.8}
+        filter="url(#body-shadow)"
+      />
+
+      {/* Верхняя кромка корпуса */}
+      <rect x={1.5} y={4} width={w - 3} height={8} rx={4} ry={4} fill="rgba(0,0,0,0.03)" />
+
+      {/* Вентиляционные щели (по бокам корпуса) */}
+      <Vents x={5} y={50} height={50} />
+      {item.modules > 1 && <Vents x={w - 9} y={50} height={50} />}
+
+      {/* ===== ВЕРХНИЕ КЛЕММЫ ===== */}
+      {/* Линия клемм */}
+      <rect x={4} y={6} width={w - 8} height={12} rx={2} fill="rgba(0,0,0,0.04)" />
+      {moduleCenters.map((x, i) => (
+        <Terminal key={`top-term-${i}`} cx={x} cy={12} />
+      ))}
+
+      {/* Зажимные винты сверху (прямоугольные рамки) */}
+      {moduleCenters.map((x, i) => (
+        <rect
+          key={`clamp-${i}`}
+          x={x - 5} y={8}
+          width={10} height={8}
+          rx={1}
+          fill="none"
+          stroke="#aaa"
+          strokeWidth={0.5}
+          opacity={0.5}
+        />
+      ))}
+
+      {/* ===== ЦОКОЛЬ С МАРКИРОВКОЙ ===== */}
+      {/* Рейтинг на корпусе */}
+      <text
+        x={cx}
+        y={56}
+        textAnchor="middle"
+        fontSize={item.modules >= 2 ? 14 : 10}
+        fontWeight="bold"
+        fill={config.accentFill}
+      >
+        {item.rating}A
+      </text>
+
+      {/* Характеристика (C/D/B) */}
+      <text
+        x={cx}
+        y={68}
+        textAnchor="middle"
+        fontSize={9}
+        fontWeight="bold"
+        fill="#666"
+      >
+        {item.character}
+      </text>
+
+      {/* Тип устройства */}
+      <text
+        x={cx}
+        y={80}
+        textAnchor="middle"
+        fontSize={item.modules >= 2 ? 10 : 8}
+        fontWeight="900"
+        fill={config.accentFill}
+        letterSpacing="1"
+      >
+        {config.typeText}
+      </text>
+
+      {/* ===== РЫЧАЖОК ===== */}
+      <BreakerLever cx={cx} up={config.handleUp} color={config.handleGrad} angle={12} />
+
+      {/* ===== КНОПКА ТЕСТ (УЗО/ДИФ) ===== */}
+      {config.showTestBtn && (
+        <TestButton cx={cx - 6} cy={46} />
+      )}
+
+      {/* ===== ИНДИКАТОР (УЗО/ДИФ) ===== */}
+      {config.showIndicator && (
+        <StatusWindow cx={cx + 6} cy={47} />
+      )}
+
+      {/* ===== НИЖНИЕ КЛЕММЫ ===== */}
+      <rect x={4} y={h - 20} width={w - 8} height={12} rx={2} fill="rgba(0,0,0,0.04)" />
+      {moduleCenters.map((x, i) => (
+        <Terminal key={`bot-term-${i}`} cx={x} cy={h - 14} />
+      ))}
+
+      {/* Зажимные винты снизу */}
+      {moduleCenters.map((x, i) => (
+        <rect
+          key={`bot-clamp-${i}`}
+          x={x - 5} y={h - 18}
+          width={10} height={8}
+          rx={1}
+          fill="none"
+          stroke="#aaa"
+          strokeWidth={0.5}
+          opacity={0.5}
+        />
+      ))}
+
+      {/* ===== ЗАЦЕПЫ НА DIN-РЕЙКУ ===== */}
+      <rect x={cx - 6} y={h - 6} width={12} height={4} rx={1} fill="#999" />
+
+      {/* ===== НОМЕР (QF1 и т.д.) ===== */}
+      <text
+        x={w - 4}
+        y={11}
+        textAnchor="end"
+        fontSize={7}
+        fill="#999"
+        fontWeight="bold"
+      >
+        {ref}
+      </text>
+
+      {/* ===== ФАЗА ===== */}
+      {item.phase && (
+        <text
+          x={4}
+          y={28}
+          textAnchor="start"
+          fontSize={6.5}
+          fill="#777"
+          fontWeight="bold"
+        >
+          {item.phase}
+        </text>
+      )}
+
+      {/* ===== ПОДПИСЬ ГРУППЫ (снизу корпуса) ===== */}
+      <text
+        x={cx}
+        y={h - 24}
+        textAnchor="middle"
+        fontSize={6}
+        fill="#888"
+      >
+        {item.label.substring(0, 18)}
+      </text>
+
+      {/* ===== ПОЛЮСНАЯ МАРКИРОВКА ===== */}
+      {item.poles === 2 && (
+        <>
+          <text x={moduleCenters[0]} y={h - 30} textAnchor="middle" fontSize={5.5} fill="#e74c3c" fontWeight="bold">L</text>
+          <text x={moduleCenters[1]} y={h - 30} textAnchor="middle" fontSize={5.5} fill="#3498db" fontWeight="bold">N</text>
+        </>
+      )}
+      {item.poles === 1 && (
+        <text x={moduleCenters[0]} y={h - 30} textAnchor="middle" fontSize={5.5} fill="#e74c3c" fontWeight="bold">L</text>
+      )}
+      {item.poles === 3 && (
+        <>
+          <text x={moduleCenters[0]} y={h - 30} textAnchor="middle" fontSize={4.5} fill="#e74c3c" fontWeight="bold">L1</text>
+          <text x={moduleCenters[1]} y={h - 30} textAnchor="middle" fontSize={4.5} fill="#f39c12" fontWeight="bold">L2</text>
+          <text x={moduleCenters[2]} y={h - 30} textAnchor="middle" fontSize={4.5} fill="#9b59b6" fontWeight="bold">L3</text>
+        </>
+      )}
+    </svg>
+  )
+}
+
+// ─── КОМПОНЕНТ ДЛЯ DND-СОРТИРОВКИ ───
+function SortableDevice({ item, index }: { item: PanelItem; index: number }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id })
+  const w = item.modules * MOD_W
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    zIndex: transform ? 10 : 1,
+    zIndex: isDragging ? 100 : 1,
+    width: w,
+    height: DEV_H,
+    position: 'relative' as const,
+    opacity: isDragging ? 0.85 : 1,
   }
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <RealisticBreaker item={item} index={index} />
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
+      <DeviceSVG item={item} index={index} />
     </div>
   )
 }
 
-// ─── СОЕДИНИТЕЛЬНЫЕ ПРОВОДА + ШИНЫ ───
-function BusBars({ items, supplyPhases }: { items: PanelItem[]; supplyPhases: 1 | 3 }) {
-  const totalWidth = items.reduce((sum, item) => sum + item.modules * MOD_W, 0)
-  const is3Phase = supplyPhases === 3
+// ─── DIN-РЕЙКА ───
+function DinRail({ width }: { width: number }) {
+  return (
+    <svg width={width} height={DIN_H + 6} viewBox={`0 0 ${width} ${DIN_H + 6}`} xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="din-surface" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#c0c0c0" />
+          <stop offset="20%" stopColor="#d8d8d8" />
+          <stop offset="40%" stopColor="#e8e8e8" />
+          <stop offset="60%" stopColor="#d0d0d0" />
+          <stop offset="100%" stopColor="#a0a0a0" />
+        </linearGradient>
+      </defs>
+      {/* Профиль DIN-рейки (симметричный z-образный профиль) */}
+      <rect x={0} y={0} width={width} height={DIN_H + 6} fill="url(#din-surface)" rx={1} />
+      {/* Верхняя губа */}
+      <rect x={0} y={0} width={width} height={3} fill="#b0b0b0" rx={1} />
+      {/* Нижняя губа */}
+      <rect x={0} y={DIN_H + 3} width={width} height={3} fill="#b0b0b0" rx={1} />
+      {/* Отверстия для винтов */}
+      {Array.from({ length: Math.floor(width / 40) }).map((_, i) => (
+        i % 3 === 0 && (
+          <circle key={i} cx={i * 40 + 20} cy={(DIN_H + 6) / 2} r={2.5} fill="#999" opacity={0.5} />
+        )
+      ))}
+      {/* Блик */}
+      <rect x={0} y={1} width={width} height={2} fill="rgba(255,255,255,0.3)" rx={0.5} />
+    </svg>
+  )
+}
 
-  const phaseColors: Record<string, string> = {
-    L1: '#e74c3c',
-    L2: '#f39c12',
-    L3: '#9b59b6',
-    N: '#3498db',
-    PE: '#f1c40f'
+// ─── ШИНЫ И РАСКЛЮЧЕНИЕ (L/N/PE ПРОВОДА МЕЖДУ УСТРОЙСТВАМИ) ───
+function BusBars({ items, supplyPhases }: { items: PanelItem[]; supplyPhases: 1 | 3 }) {
+  const totalWidth = items.reduce((s, i) => s + i.modules * MOD_W, 0)
+  const is3Phase = supplyPhases === 3
+  const busH = 90
+
+  // Позиции устройств в ряду
+  const devicePositions: { x: number; width: number; item: PanelItem }[] = []
+  let pos = 0
+  for (const item of items) {
+    devicePositions.push({ x: pos, width: item.modules * MOD_W, item })
+    pos += item.modules * MOD_W
   }
 
-  // Для каждого модуля определяем цвет фазы
-  function getPhaseColor(item: PanelItem): string {
-    if (item.phase?.includes('L1')) return phaseColors.L1
-    if (item.phase?.includes('L2')) return phaseColors.L2
-    if (item.phase?.includes('L3')) return phaseColors.L3
-    return '#e74c3c' // default L
+  // Какой сигнал на каждом модуле устройства
+  function getModuleSignal(item: PanelItem, modIdx: number): { label: string; color: string } | null {
+    // Для УЗО/диф: последний полюс — N, остальные — фаза
+    if (item.type === 'rcd' || item.type === 'diff_breaker') {
+      if (item.poles >= 2 && modIdx === item.poles - 1) {
+        return { label: 'N', color: '#3498db' }
+      }
+    }
+    if (item.poles === 1) return { label: 'L', color: '#e74c3c' }
+    if (item.poles === 2) {
+      if (modIdx === 0) return { label: 'L', color: '#e74c3c' }
+      return { label: 'N', color: '#3498db' }
+    }
+    if (item.poles === 3) {
+      const colors = ['#e74c3c', '#f39c12', '#9b59b6']
+      return { label: `L${modIdx + 1}`, color: colors[modIdx] }
+    }
+    if (item.poles === 4) {
+      if (modIdx < 3) {
+        const colors = ['#e74c3c', '#f39c12', '#9b59b6']
+        return { label: `L${modIdx + 1}`, color: colors[modIdx] }
+      }
+      return { label: 'N', color: '#3498db' }
+    }
+    return null
+  }
+
+  // Y-позиции шин
+  const busY = {
+    L: 20,
+    L1: 12, L2: 20, L3: 28,
+    N: 48,
+    PE: 70,
+  }
+
+  function getBusY(label: string): number {
+    if (is3Phase) {
+      if (label === 'L' || label === 'L1') return busY.L1
+      if (label === 'L2') return busY.L2
+      if (label === 'L3') return busY.L3
+      if (label === 'N') return busY.N
+      return busY.PE
+    }
+    if (label === 'L' || label === 'L1') return busY.L
+    if (label === 'N') return busY.N
+    return busY.PE
+  }
+
+  function getBusColor(label: string): string {
+    if (label === 'L' || label === 'L1') return '#e74c3c'
+    if (label === 'L2') return '#f39c12'
+    if (label === 'L3') return '#9b59b6'
+    if (label === 'N') return '#3498db'
+    return '#f1c40f'
   }
 
   return (
-    <div className="relative" style={{ width: totalWidth, height: 70 }}>
-      <svg width={totalWidth} height={70} className="absolute inset-0">
-        {/* Вертикальные соединительные провода от каждого модуля */}
-        {items.map((item, itemIdx) => {
-          const xStart = items.slice(0, itemIdx).reduce((s, i) => s + i.modules * MOD_W, 0)
-          const phaseColor = getPhaseColor(item)
+    <div className="relative" style={{ width: totalWidth, height: busH }}>
+      <svg width={totalWidth} height={busH} viewBox={`0 0 ${totalWidth} ${busH}`} xmlns="http://www.w3.org/2000/svg">
+        {/* === ФОН (внутренняя панель) === */}
+        <rect x={0} y={0} width={totalWidth} height={busH} fill="rgba(0,0,0,0.02)" rx={2} />
 
-          // Для каждого полюса модуля — вертикальная линия
-          const wires: React.ReactNode[] = []
-          for (let pole = 0; pole < item.modules; pole++) {
-            const x = xStart + pole * MOD_W + MOD_W / 2
-            wires.push(
-              <g key={`${item.id}-wires-${pole}`}>
-                {/* Фазный провод L — от модуля к шине */}
-                {(item.modules === 1 || pole === 0) && (
-                  <line x1={x} y1={2} x2={x} y2={12} stroke={phaseColor} strokeWidth={1.5} strokeLinecap="round" />
-                )}
-                {/* N (нулевой) провод — если устройство 2P+ */}
-                {item.modules >= 2 && pole === 1 && (
-                  <line x1={x} y1={2} x2={x} y2={12} stroke={phaseColors.N} strokeWidth={1.5} strokeLinecap="round" />
-                )}
-                {/* PE провод — всегда в первом полюсе */}
-                {pole === 0 && (
-                  <line x1={x + 3} y1={2} x2={x + 3} y2={12} stroke={phaseColors.PE} strokeWidth={1} strokeLinecap="round" strokeDasharray="2,1" />
-                )}
+        {/* === ВЕРТИКАЛЬНЫЕ ПРОВОДА ОТ КАЖДОГО МОДУЛЯ К ШИНАМ === */}
+        {devicePositions.map((dp) =>
+          Array.from({ length: dp.item.modules }).map((_, modIdx) => {
+            const cx = dp.x + modIdx * MOD_W + MOD_W / 2
+            const signal = getModuleSignal(dp.item, modIdx)
+            if (!signal) return null
+            const targetY = getBusY(signal.label)
+
+            return (
+              <g key={`wire-${dp.item.id}-${modIdx}`}>
+                {/* Основной провод от клеммы устройства до шины */}
+                <path
+                  d={`M ${cx} 2 L ${cx} ${targetY - 4} Q ${cx} ${targetY} ${cx - 3} ${targetY}`}
+                  fill="none"
+                  stroke={signal.color}
+                  strokeWidth={1.8}
+                  strokeLinecap="round"
+                  opacity={0.9}
+                />
+                {/* Изоляция у клеммы (утолщение) */}
+                <line
+                  x1={cx} y1={2} x2={cx} y2={10}
+                  stroke={signal.color}
+                  strokeWidth={4}
+                  strokeLinecap="round"
+                  opacity={0.2}
+                />
+                {/* Блик на проводе */}
+                <line
+                  x1={cx + 0.5} y1={10} x2={cx + 0.5} y2={targetY - 8}
+                  stroke="white"
+                  strokeWidth={0.5}
+                  opacity={0.15}
+                />
+                {/* Точка соединения с шиной */}
+                <circle cx={cx - 3} cy={targetY} r={2} fill={signal.color} stroke="white" strokeWidth={0.5} />
               </g>
             )
-          }
-          return wires
+          })
+        )}
+
+        {/* === ПЕРЕМЫЧКИ МЕЖДУ УСТРОЙСТВАМИ (DAISY-CHAIN) === */}
+        {devicePositions.slice(0, -1).map((dp, i) => {
+          const next = devicePositions[i + 1]
+          const fromX = dp.x + dp.width
+          const toX = next.x
+          const midX = (fromX + toX) / 2
+          const gap = toX - fromX
+          if (gap > MOD_W * 1.5) return null
+
+          // Общие сигналы между соседними устройствами
+          const commonSignals: { label: string; color: string }[] = []
+          const fromSignals = Array.from({ length: dp.item.modules }).map((_, mi) => getModuleSignal(dp.item, mi))
+          const toSignals = Array.from({ length: next.item.modules }).map((_, mi) => getModuleSignal(next.item, mi))
+
+          const fromL = fromSignals.find(s => s?.label === 'L' || s?.label === 'L1')
+          const toL = toSignals.find(s => s?.label === 'L' || s?.label === 'L1')
+          if (fromL && toL) commonSignals.push(fromL)
+
+          const fromN = fromSignals.find(s => s?.label === 'N')
+          const toN = toSignals.find(s => s?.label === 'N')
+          if (fromN && toN) commonSignals.push(fromN)
+
+          return commonSignals.map((sig) => {
+            const wireY = 4 + (sig.label === 'N' ? 8 : 0)
+            return (
+              <g key={`jumper-${i}-${sig.label}`}>
+                <path
+                  d={`M ${fromX} ${wireY} Q ${midX} ${wireY - 6} ${toX} ${wireY}`}
+                  fill="none"
+                  stroke={sig.color}
+                  strokeWidth={1.2}
+                  strokeLinecap="round"
+                  opacity={0.7}
+                  strokeDasharray={sig.label === 'N' ? '2,2' : 'none'}
+                />
+                <circle cx={fromX} cy={wireY} r={1.2} fill={sig.color} opacity={0.7} />
+                <circle cx={toX} cy={wireY} r={1.2} fill={sig.color} opacity={0.7} />
+              </g>
+            )
+          })
         })}
 
-        {/* Горизонтальные шины (гребёнка) */}
-        {(() => {
-          const rowW = totalWidth
-          const L_y = 14
-          const N_y = 20
-          const PE_y = 26
+        {/* === ГОРИЗОНТАЛЬНЫЕ ШИНЫ === */}
+        {/* L / L1 шина */}
+        <rect
+          x={0} y={is3Phase ? busY.L1 : busY.L}
+          width={totalWidth}
+          height={5}
+          rx={2}
+          fill="#e74c3c"
+          opacity={0.85}
+        />
+        <text x={totalWidth - 4} y={is3Phase ? busY.L1 + 4 : busY.L + 4} textAnchor="end" fontSize={7} fill="white" fontWeight="bold">
+          {is3Phase ? 'L1' : 'L'}
+        </text>
 
-          // Для каждой позиции под модулем рисуем цветной сегмент
-          let pos = 0
-          const segments: { x: number; w: number; color: string; y: number }[] = []
-          for (const item of items) {
-            const phaseColor = getPhaseColor(item)
-            // L-шина под каждым модулем
-            segments.push({ x: pos, w: item.modules * MOD_W, color: phaseColor, y: L_y })
-            segments.push({ x: pos, w: item.modules * MOD_W, color: phaseColors.N, y: N_y })
-            segments.push({ x: pos, w: item.modules * MOD_W, color: phaseColors.PE, y: PE_y })
-            pos += item.modules * MOD_W
-          }
-          return segments.map((seg, i) => (
-            <rect key={`seg-${i}`} x={seg.x} y={seg.y} width={seg.w} height={4} fill={seg.color} rx={1} opacity={0.85} />
-          ))
-        })()}
+        {/* L2 шина (3-фазные) */}
+        {is3Phase && (
+          <>
+            <rect x={0} y={busY.L2} width={totalWidth} height={5} rx={2} fill="#f39c12" opacity={0.85} />
+            <text x={totalWidth - 4} y={busY.L2 + 4} textAnchor="end" fontSize={7} fill="white" fontWeight="bold">L2</text>
+          </>
+        )}
 
-        {/* Горизонтальные линии по всей длине (главная магистраль) */}
-        <line x1={0} x2={totalWidth} y1={16} y2={16} stroke={is3Phase ? '#e74c3c' : '#e74c3c'} strokeWidth={1} opacity={0.3} />
-        <line x1={0} x2={totalWidth} y1={22} y2={22} stroke="#3498db" strokeWidth={1} opacity={0.3} />
-        <line x1={0} x2={totalWidth} y1={28} y2={28} stroke="#f1c40f" strokeWidth={1} opacity={0.3} />
-      </svg>
+        {/* L3 шина (3-фазные) */}
+        {is3Phase && (
+          <>
+            <rect x={0} y={busY.L3} width={totalWidth} height={5} rx={2} fill="#9b59b6" opacity={0.85} />
+            <text x={totalWidth - 4} y={busY.L3 + 4} textAnchor="end" fontSize={7} fill="white" fontWeight="bold">L3</text>
+          </>
+        )}
 
-      {/* Подписи шин */}
-      <div className="absolute bottom-0 left-0 flex gap-3 text-[8px]">
+        {/* N шина */}
+        <rect x={0} y={busY.N} width={totalWidth} height={5} rx={2} fill="#3498db" opacity={0.85} />
+        <text x={totalWidth - 4} y={busY.N + 4} textAnchor="end" fontSize={7} fill="white" fontWeight="bold">N</text>
+
+        {/* PE шина (жёлто-зелёная) */}
+        <rect x={0} y={busY.PE} width={totalWidth} height={5} rx={2} fill="#f1c40f" opacity={0.85} />
+        {Array.from({ length: Math.ceil(totalWidth / 16) }).map((_, i) => (
+          <rect key={i} x={i * 16} y={busY.PE} width={8} height={5} fill="#2ecc71" opacity={0.5} />
+        ))}
+        <text x={totalWidth - 4} y={busY.PE + 4} textAnchor="end" fontSize={7} fill="#333" fontWeight="bold">PE</text>
+
+        {/* === ЗУБЦЫ ГРЕБЁНКИ (подвод к клеммам) === */}
+        {devicePositions.map((dp) =>
+          Array.from({ length: dp.item.modules }).map((_, modIdx) => {
+            const cx = dp.x + modIdx * MOD_W + MOD_W / 2
+            const signal = getModuleSignal(dp.item, modIdx)
+            if (!signal) return null
+            const targetY = getBusY(signal.label)
+            return (
+              <g key={`tooth-${dp.item.id}-${modIdx}`}>
+                <rect
+                  x={cx - 2.5}
+                  y={targetY - 4}
+                  width={5}
+                  height={8}
+                  rx={1}
+                  fill={signal.color}
+                  opacity={0.9}
+                />
+              </g>
+            )
+          })
+        )}
+
+        {/* === МАРКЕР ПРОХОДА N ЧЕРЕЗ УЗО/ДИФ === */}
+        {devicePositions.map((dp) => {
+          const isRcd = dp.item.type === 'rcd' || dp.item.type === 'diff_breaker'
+          if (!isRcd || dp.item.poles < 2) return null
+          const nModIdx = dp.item.poles - 1
+          const nCx = dp.x + nModIdx * MOD_W + MOD_W / 2
+
+          return (
+            <g key={`rcd-n-${dp.item.id}`}>
+              {/* Верхняя метка — N входит в УЗО */}
+              <text x={nCx} y={8} textAnchor="middle" fontSize={5} fill="#3498db" fontWeight="bold" opacity={0.7}>
+                N↓
+              </text>
+              {/* Нижняя метка — N выходит из УЗО */}
+              <text x={nCx} y={busY.N - 8} textAnchor="middle" fontSize={5} fill="#3498db" fontWeight="bold" opacity={0.7}>
+                N↑
+              </text>
+              {/* Вертикальная пунктирная линия (проход сквозь устройство) */}
+              <line
+                x1={nCx} y1={10}
+                x2={nCx} y2={busY.N - 12}
+                stroke="#3498db"
+                strokeWidth={0.8}
+                strokeDasharray="2,3"
+                opacity={0.3}
+              />
+            </g>
+          )
+        })}
+
+        {/* === ПОДПИСИ НА ШИНАХ (слева) === */}
         {is3Phase ? (
           <>
-            <span className="text-[#e74c3c] font-bold">L1</span>
-            <span className="text-[#f39c12] font-bold">L2</span>
-            <span className="text-[#9b59b6] font-bold">L3</span>
+            <text x={6} y={busY.L1 + 4} fontSize={6} fill="white" fontWeight="bold" opacity={0.9}>L1</text>
+            <text x={6} y={busY.L2 + 4} fontSize={6} fill="white" fontWeight="bold" opacity={0.9}>L2</text>
+            <text x={6} y={busY.L3 + 4} fontSize={6} fill="white" fontWeight="bold" opacity={0.9}>L3</text>
           </>
         ) : (
-          <span className="text-[#e74c3c] font-bold">L</span>
+          <text x={6} y={busY.L + 4} fontSize={6} fill="white" fontWeight="bold" opacity={0.9}>L</text>
         )}
-        <span className="text-[#3498db] font-bold">N</span>
-        <span className="text-[#f1c40f] font-bold">PE</span>
+        <text x={6} y={busY.N + 4} fontSize={6} fill="white" fontWeight="bold" opacity={0.9}>N</text>
+        <text x={6} y={busY.PE + 4} fontSize={6} fill="#333" fontWeight="bold" opacity={0.9}>PE</text>
+      </svg>
+    </div>
+  )
+}
+
+// ─── РЯД УСТРОЙСТВ ───
+function DeviceRow({
+  row,
+  rowIndex,
+  onDragEnd,
+  supplyPhases,
+}: {
+  row: PanelItem[]
+  rowIndex: number
+  onDragEnd: (event: DragEndEvent) => void
+  supplyPhases: 1 | 3
+}) {
+  const rowWidth = row.reduce((s, i) => s + i.modules * MOD_W, 0)
+
+  return (
+    <div className="flex flex-col items-center gap-0 relative">
+      {/* Метка ряда */}
+      <div className="text-[9px] text-gray-400 font-mono mb-0.5 self-start ml-1">
+        Ряд {rowIndex + 1}
+      </div>
+
+      {/* DIN-рейка под устройствами */}
+      <div className="relative">
+        <DinRail width={rowWidth} />
+
+        {/* Устройства */}
+        <DndContext collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+          <SortableContext items={row.map(i => i.id)} strategy={horizontalListSortingStrategy}>
+            <div className="flex" style={{ marginTop: -DIN_H - 6, marginBottom: -6 }}>
+              {row.map((item, idx) => (
+                <SortableDevice key={item.id} item={item} index={idx} />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
+      </div>
+
+      {/* Гребёнка + шины под устройствами */}
+      <BusBars items={row} supplyPhases={supplyPhases} />
+    </div>
+  )
+}
+
+// ─── КОРПУС ЩИТА ───
+function PanelEnclosure({ children, width }: { children: React.ReactNode; width: number }) {
+  return (
+    <div className="relative" style={{ minWidth: width }}>
+      {/* Внешняя рамка корпуса */}
+      <div
+        className="relative rounded-lg border-4 border-gray-600 shadow-2xl bg-gray-100 overflow-hidden"
+        style={{
+          boxShadow: 'inset 0 0 20px rgba(0,0,0,0.1), 0 8px 32px rgba(0,0,0,0.3)',
+          borderColor: '#5a5a5a',
+          background: 'linear-gradient(135deg, #e8e8e8 0%, #d0d0d0 100%)',
+        }}
+      >
+        {/* Петля двери (декоративная) */}
+        <div className="absolute left-1 top-4 w-3 h-5 rounded-full bg-gray-400 border border-gray-500 shadow-inner" />
+        <div className="absolute left-1 bottom-4 w-3 h-5 rounded-full bg-gray-400 border border-gray-500 shadow-inner" />
+
+        {/* Внутреннее пространство */}
+        <div
+          className="p-5 m-2 rounded-md"
+          style={{
+            background: 'linear-gradient(180deg, #f8f8f8 0%, #eeeeee 50%, #e8e8e8 100%)',
+            boxShadow: 'inset 0 0 8px rgba(0,0,0,0.08)',
+          }}
+        >
+          {children}
+        </div>
+
+        {/* Винты по углам */}
+        <div className="absolute top-2 right-3 w-2.5 h-2.5 rounded-full bg-gray-400 border border-gray-500 shadow-inner" />
+        <div className="absolute bottom-2 right-3 w-2.5 h-2.5 rounded-full bg-gray-400 border border-gray-500 shadow-inner" />
+        <div className="absolute top-2 left-5 w-2.5 h-2.5 rounded-full bg-gray-400 border border-gray-500 shadow-inner" />
+        <div className="absolute bottom-2 left-5 w-2.5 h-2.5 rounded-full bg-gray-400 border border-gray-500 shadow-inner" />
       </div>
     </div>
   )
 }
 
-// ─── ГЛАВНЫЙ КОМПОНЕНТ ЩИТКА ───
+// ─── ГЛАВНЫЙ КОМПОНЕНТ ───
 export function RealisticPanel({
   result,
   onOrderChange,
@@ -239,83 +903,92 @@ export function RealisticPanel({
 
     // Рубильник
     if (result.loadBreakSwitch) {
+      const ls = result.loadBreakSwitch
       newItems.push({
-        id: result.loadBreakSwitch.id,
+        id: ls.id,
         type: 'load_break_switch',
-        label: result.loadBreakSwitch.group,
-        sublabel: `${result.loadBreakSwitch.rating}А`,
-        modules: result.loadBreakSwitch.modules,
-        phase: result.loadBreakSwitch.phase,
-        rating: result.loadBreakSwitch.rating,
-        poles: result.loadBreakSwitch.poles,
+        label: 'Мастер-выключатель',
+        sublabel: `${ls.rating}А`,
+        modules: ls.modules,
+        phase: ls.phase,
+        rating: ls.rating,
+        character: '',
+        poles: ls.poles,
       })
     }
 
     // Вводной
+    const mb = result.mainBreaker
     newItems.push({
-      id: result.mainBreaker.id,
+      id: mb.id,
       type: 'main_breaker',
-      label: result.mainBreaker.group,
-      sublabel: `${result.mainBreaker.characteristic}${result.mainBreaker.rating}`,
-      modules: result.mainBreaker.modules,
-      phase: result.mainBreaker.phase,
-      rating: result.mainBreaker.rating,
-      poles: result.mainBreaker.poles,
+      label: mb.group,
+      sublabel: `${mb.rating}А`,
+      modules: mb.modules,
+      phase: mb.phase,
+      rating: mb.rating,
+      character: mb.characteristic,
+      poles: mb.poles,
     })
 
-    // УЗО + автоматы
+    // Остальные устройства
     for (const d of result.devices) {
       if (d.id === 'main' || d.id === 'load_break') continue
       const isRcd = d.type === 'rcd' || d.type === 'diff_breaker'
       newItems.push({
         id: d.id,
         type: d.type,
-        label: isRcd ? (d as RCD).protectedGroups.join(', ') : (d as CircuitBreaker).group,
+        label: isRcd
+          ? (d as RCD).protectedGroups.join(', ')
+          : (d as CircuitBreaker).group,
         sublabel: isRcd
           ? `${(d as RCD).ratingAmps}А/${(d as RCD).leakageMA}мА`
           : `${(d as CircuitBreaker).characteristic}${(d as CircuitBreaker).rating}`,
         modules: d.modules,
         phase: d.phase,
         rating: isRcd ? (d as RCD).ratingAmps : (d as CircuitBreaker).rating,
+        character: isRcd ? '' : (d as CircuitBreaker).characteristic,
         poles: d.poles,
       })
     }
 
     setItems(newItems)
-    // Уведомить родителя о начальном порядке
     onOrderChange?.(newItems.map(i => i.id))
   }, [result])
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
     if (active.id !== over?.id) {
-      setItems((items) => {
-        const oldIndex = items.findIndex((i) => i.id === active.id)
-        const newIndex = items.findIndex((i) => i.id === over?.id)
-        const newItems = arrayMove(items, oldIndex, newIndex)
-        // Уведомить родителя о новом порядке
-        onOrderChange?.(newItems.map(i => i.id))
-        return newItems
+      setItems((prev) => {
+        const oldIndex = prev.findIndex((i) => i.id === active.id)
+        const newIndex = prev.findIndex((i) => i.id === over?.id)
+        const updated = arrayMove(prev, oldIndex, newIndex)
+        onOrderChange?.(updated.map(i => i.id))
+        return updated
       })
     }
   }
 
-  // Разбивка по DIN-рейкам (12 модулей)
-  const rows: PanelItem[][] = []
-  let currentRow: PanelItem[] = []
-  let currentMods = 0
-  for (const item of items) {
-    if (currentMods + item.modules > 12) {
-      rows.push(currentRow)
-      currentRow = []
-      currentMods = 0
+  const rows = useMemo(() => {
+    const result: PanelItem[][] = []
+    let currentRow: PanelItem[] = []
+    let currentMods = 0
+    for (const item of items) {
+      if (currentMods + item.modules > 12 && currentRow.length > 0) {
+        result.push(currentRow)
+        currentRow = []
+        currentMods = 0
+      }
+      currentRow.push(item)
+      currentMods += item.modules
     }
-    currentRow.push(item)
-    currentMods += item.modules
-  }
-  if (currentRow.length > 0) rows.push(currentRow)
+    if (currentRow.length > 0) result.push(currentRow)
+    return result
+  }, [items])
 
-  const actualModules = items.reduce((sum, i) => sum + i.modules, 0)
+  const actualModules = items.reduce((s, i) => s + i.modules, 0)
+  const maxRowWidth = Math.max(...rows.map(r => r.reduce((s, i) => s + i.modules * MOD_W, 0)), 200)
+  const panelWidth = maxRowWidth + 60
 
   // Сквозной индекс для нумерации QF
   let qfIndex = 1
@@ -327,48 +1000,67 @@ export function RealisticPanel({
   }
 
   return (
-    <div className="p-8 bg-[#9098a0] rounded-lg border-4 border-gray-500 shadow-2xl max-w-[700px] mx-auto">
-      {/* Заголовок щитка */}
-      <div className="text-center font-bold mb-2 tracking-widest">
-        <div className="text-white text-xs bg-gray-700 inline-block px-4 py-0.5 rounded">РАСПРЕДЕЛИТЕЛЬНЫЙ ЩИТ</div>
-        <div className="text-gray-200 text-[10px] font-normal tracking-normal mt-1">
-          {result.supplyPhases === 3 ? '3 фазы' : '1 фаза'} · {actualModules} модулей · щит {result.recommendedPanelModules} мест ({result.panelRows} ряда)
+    <div className="flex flex-col items-center gap-6 py-4">
+      {/* Заголовок */}
+      <div className="text-center">
+        <div className="text-sm font-bold tracking-[0.15em] text-gray-700 bg-gray-200 inline-block px-6 py-1 rounded-sm shadow-inner">
+          РАСПРЕДЕЛИТЕЛЬНЫЙ ЩИТ
+        </div>
+        <div className="text-[10px] text-gray-500 mt-1 font-mono">
+          {result.supplyPhases === 3 ? '3 фазы (380В)' : '1 фаза (220В)'} · {actualModules} модулей · щит {result.recommendedPanelModules} мест ({result.panelRows} ряда)
         </div>
       </div>
 
-      <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <div className="flex flex-col gap-10">
-          {rows.map((row, rowIndex) => (
-            <div key={rowIndex} className="relative w-full flex flex-col items-center">
+      {/* SVG-фильтры */}
+      <svg width={0} height={0} className="absolute">
+        <SvgDefs />
+      </svg>
 
-              {/* DIN-рейка */}
-              <div className="absolute top-[30px] w-[calc(100%-10px)] h-7 bg-gradient-to-b from-gray-400 via-gray-200 to-gray-400 border border-gray-500 shadow-sm z-0">
-                <div className="w-full h-full flex justify-between items-center px-2 opacity-25">
-                  {Array.from({ length: 28 }).map((_, i) => (
-                    <div key={i} className="w-1.5 h-3 bg-gray-600 rounded-sm"></div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Автоматы */}
-              <div className="relative z-10 flex w-full max-w-[408px] justify-start items-center">
-                <SortableContext items={row.map(i => i.id)} strategy={horizontalListSortingStrategy}>
-                  {row.map(item => {
-                    const idx = getIndex(item)
-                    return <SortableBreaker key={item.id} item={item} index={idx} />
-                  })}
-                </SortableContext>
-              </div>
-
-              {/* Шины + соединения */}
-              <div className="relative z-10 mt-0 flex w-full max-w-[408px] justify-start">
-                <BusBars items={row} supplyPhases={result.supplyPhases} />
-              </div>
-
-            </div>
+      {/* Корпус */}
+      <PanelEnclosure width={panelWidth}>
+        {/* Ряды устройств */}
+        <div className="flex flex-col gap-8">
+          {rows.map((row, ri) => (
+            <DeviceRow
+              key={ri}
+              row={row}
+              rowIndex={ri}
+              onDragEnd={handleDragEnd}
+              supplyPhases={result.supplyPhases}
+            />
           ))}
         </div>
-      </DndContext>
+
+        {/* N и PE шины внизу корпуса */}
+        <div className="mt-6 flex items-center gap-4 px-2">
+          {/* N шина */}
+          <div className="flex items-center gap-2 bg-[#3498db]/10 border border-[#3498db]/30 rounded px-3 py-1.5">
+            <div className="w-3 h-3 rounded-full bg-[#3498db]"></div>
+            <span className="text-[10px] font-bold text-[#3498db]">N</span>
+            <span className="text-[8px] text-gray-500">— нейтральная шина</span>
+          </div>
+          {/* PE шина */}
+          <div className="flex items-center gap-2 bg-[#f1c40f]/10 border border-[#f1c40f]/30 rounded px-3 py-1.5">
+            <div className="w-3 h-3 rounded-full bg-[#f1c40f] border border-[#d4ac0d]"></div>
+            <span className="text-[10px] font-bold text-[#d4ac0d]">PE</span>
+            <span className="text-[8px] text-gray-500">— заземление</span>
+          </div>
+          {/* L шина */}
+          <div className="flex items-center gap-2 bg-[#e74c3c]/10 border border-[#e74c3c]/30 rounded px-3 py-1.5">
+            <div className="w-3 h-3 rounded-full bg-[#e74c3c]"></div>
+            <span className="text-[10px] font-bold text-[#e74c3c]">
+              {result.supplyPhases === 3 ? 'L1/L2/L3' : 'L'}
+            </span>
+            <span className="text-[8px] text-gray-500">— фаза</span>
+          </div>
+        </div>
+      </PanelEnclosure>
+
+      {/* Условные обозначения */}
+      <div className="flex flex-wrap gap-4 text-[9px] text-gray-400 font-mono mt-1">
+        <span>🔄 = перетаскивание</span>
+        <span>⏎ = Drag & Drop сортировка</span>
+      </div>
     </div>
   )
 }
