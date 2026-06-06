@@ -807,6 +807,196 @@ function BusBars({ items, supplyPhases }: { items: PanelItem[]; supplyPhases: 1 
   )
 }
 
+// ─── ВЕРХНЯЯ РАЗВОДКА (приход) ───
+function TopWiring({
+  items,
+  supplyPhases,
+  rowIndex,
+}: {
+  items: PanelItem[]
+  supplyPhases: 1 | 3
+  rowIndex: number
+}) {
+  const totalWidth = items.reduce((s, i) => s + i.modules * MOD_W, 0)
+  const is3Phase = supplyPhases === 3
+  const topH = 64
+
+  // Позиции устройств
+  const devicePositions: { x: number; width: number; item: PanelItem }[] = []
+  let pos = 0
+  for (const item of items) {
+    devicePositions.push({ x: pos, width: item.modules * MOD_W, item })
+    pos += item.modules * MOD_W
+  }
+
+  function getModuleSignal(item: PanelItem, modIdx: number): { label: string; color: string } | null {
+    if (item.type === 'rcd' || item.type === 'diff_breaker') {
+      if (item.poles >= 2 && modIdx === item.poles - 1) return { label: 'N', color: '#3498db' }
+    }
+    if (item.poles === 1) return { label: 'L', color: '#e74c3c' }
+    if (item.poles === 2) {
+      if (modIdx === 0) return { label: 'L', color: '#e74c3c' }
+      return { label: 'N', color: '#3498db' }
+    }
+    if (item.poles === 3) {
+      const colors = ['#e74c3c', '#f39c12', '#9b59b6']
+      return { label: `L${modIdx + 1}`, color: colors[modIdx] }
+    }
+    if (item.poles === 4) {
+      if (modIdx < 3) {
+        const colors = ['#e74c3c', '#f39c12', '#9b59b6']
+        return { label: `L${modIdx + 1}`, color: colors[modIdx] }
+      }
+      return { label: 'N', color: '#3498db' }
+    }
+    return null
+  }
+
+  // Позиции верхней гребёнки
+  const topY = { L1: 50, L2: 43, L3: 36, N: 28, PE: 20 }
+
+  function getTopY(label: string): number {
+    if (is3Phase) {
+      if (label === 'L' || label === 'L1') return topY.L1
+      if (label === 'L2') return topY.L2
+      if (label === 'L3') return topY.L3
+      if (label === 'N') return topY.N
+      return topY.PE
+    }
+    if (label === 'L' || label === 'L1') return topY.L1
+    if (label === 'N') return topY.N
+    return topY.PE
+  }
+
+  return (
+    <div className="relative" style={{ width: totalWidth, height: topH }}>
+      <svg width={totalWidth} height={topH} viewBox={`0 0 ${totalWidth} ${topH}`} xmlns="http://www.w3.org/2000/svg">
+        {/* === ПРИХОДЯЩИЙ КАБЕЛЬ (только для первого ряда) === */}
+        {rowIndex === 0 && (
+          <g>
+            {/* Толстый кабель сверху */}
+            <rect
+              x={totalWidth / 2 - 4}
+              y={0}
+              width={8}
+              height={18}
+              rx={3}
+              fill="#2c2c2c"
+            />
+            {/* Разделение на жилы */}
+            <path d={`M ${totalWidth / 2} 18 L ${totalWidth / 2 - 8} 30`} stroke="#e74c3c" strokeWidth={3} strokeLinecap="round" />
+            <path d={`M ${totalWidth / 2} 18 L ${totalWidth / 2} 36`} stroke="#3498db" strokeWidth={3} strokeLinecap="round" />
+            <path d={`M ${totalWidth / 2} 18 L ${totalWidth / 2 + 8} 26`} stroke="#f1c40f" strokeWidth={3} strokeLinecap="round" />
+            {/* Жилы на конце: L, N, PE */}
+            <line x1={totalWidth / 2 - 8} y1={30} x2={totalWidth / 2 - 8} y2={getTopY('L')} stroke="#e74c3c" strokeWidth={2.5} strokeLinecap="round" />
+            <line x1={totalWidth / 2} y1={36} x2={totalWidth / 2} y2={getTopY('N')} stroke="#3498db" strokeWidth={2.5} strokeLinecap="round" />
+            <line x1={totalWidth / 2 + 8} y1={26} x2={totalWidth / 2 + 8} y2={getTopY('PE')} stroke="#f1c40f" strokeWidth={2.5} strokeLinecap="round" />
+          </g>
+        )}
+
+        {/* === ВЕРХНЯЯ ГРЕБЁНКА L === */}
+        {rowIndex === 0 && (
+          <>
+            {/* L шина */}
+            <rect x={0} y={topY.L1} width={totalWidth} height={4} rx={2} fill="#e74c3c" opacity={0.85} />
+            <text x={totalWidth - 4} y={topY.L1 + 3} textAnchor="end" fontSize={6} fill="white" fontWeight="bold">{is3Phase ? 'L1' : 'L'}</text>
+            <text x={6} y={topY.L1 + 3} fontSize={6} fill="white" fontWeight="bold" opacity={0.9}>{is3Phase ? 'L1' : 'L'}</text>
+
+            {/* L2/L3 для 3-фаз */}
+            {is3Phase && (
+              <>
+                <rect x={0} y={topY.L2} width={totalWidth} height={4} rx={2} fill="#f39c12" opacity={0.85} />
+                <text x={totalWidth - 4} y={topY.L2 + 3} textAnchor="end" fontSize={6} fill="white" fontWeight="bold">L2</text>
+                <text x={6} y={topY.L2 + 3} fontSize={6} fill="white" fontWeight="bold" opacity={0.9}>L2</text>
+
+                <rect x={0} y={topY.L3} width={totalWidth} height={4} rx={2} fill="#9b59b6" opacity={0.85} />
+                <text x={totalWidth - 4} y={topY.L3 + 3} textAnchor="end" fontSize={6} fill="white" fontWeight="bold">L3</text>
+                <text x={6} y={topY.L3 + 3} fontSize={6} fill="white" fontWeight="bold" opacity={0.9}>L3</text>
+              </>
+            )}
+
+            {/* N шина */}
+            <rect x={0} y={topY.N} width={totalWidth} height={4} rx={2} fill="#3498db" opacity={0.85} />
+            <text x={totalWidth - 4} y={topY.N + 3} textAnchor="end" fontSize={6} fill="white" fontWeight="bold">N</text>
+            <text x={6} y={topY.N + 3} fontSize={6} fill="white" fontWeight="bold" opacity={0.9}>N</text>
+
+            {/* PE шина */}
+            <rect x={0} y={topY.PE} width={totalWidth} height={4} rx={2} fill="#f1c40f" opacity={0.85} />
+            <text x={totalWidth - 4} y={topY.PE + 3} textAnchor="end" fontSize={6} fill="#333" fontWeight="bold">PE</text>
+            <text x={6} y={topY.PE + 3} fontSize={6} fill="#333" fontWeight="bold" opacity={0.9}>PE</text>
+          </>
+        )}
+
+        {/* === ПЕРЕМЫЧКИ ПРИХОДА (между входами соседних устройств) === */}
+        {devicePositions.slice(0, -1).map((dp, i) => {
+          const next = devicePositions[i + 1]
+          const fromX = dp.x + dp.width
+          const toX = next.x
+          const midX = (fromX + toX) / 2
+          const gap = toX - fromX
+          if (gap > MOD_W * 1.5) return null
+
+          const commonSignals: { label: string; color: string }[] = []
+          const fromSignals = Array.from({ length: dp.item.modules }).map((_, mi) => getModuleSignal(dp.item, mi))
+          const toSignals = Array.from({ length: next.item.modules }).map((_, mi) => getModuleSignal(next.item, mi))
+
+          const fromL = fromSignals.find(s => s?.label === 'L' || s?.label === 'L1')
+          const toL = toSignals.find(s => s?.label === 'L' || s?.label === 'L1')
+          if (fromL && toL) commonSignals.push(fromL)
+
+          const fromN = fromSignals.find(s => s?.label === 'N')
+          const toN = toSignals.find(s => s?.label === 'N')
+          if (fromN && toN) commonSignals.push(fromN)
+
+          return commonSignals.map((sig) => {
+            const wireY = topH - 8 - (sig.label === 'N' ? 4 : 0)
+            return (
+              <g key={`top-jumper-${i}-${sig.label}`}>
+                <path
+                  d={`M ${fromX} ${wireY} Q ${midX} ${wireY + 5} ${toX} ${wireY}`}
+                  fill="none"
+                  stroke={sig.color}
+                  strokeWidth={1.5}
+                  strokeLinecap="round"
+                  opacity={0.7}
+                />
+                <circle cx={fromX} cy={wireY} r={1.5} fill={sig.color} opacity={0.8} />
+                <circle cx={toX} cy={wireY} r={1.5} fill={sig.color} opacity={0.8} />
+              </g>
+            )
+          })
+        })}
+
+        {/* === ВЕРТИКАЛЬНЫЕ ПРОВОДА ОТ ВЕРХНЕЙ ГРЕБЁНКИ К КЛЕММАМ === */}
+        {devicePositions.map((dp) =>
+          Array.from({ length: dp.item.modules }).map((_, modIdx) => {
+            const cx = dp.x + modIdx * MOD_W + MOD_W / 2
+            const signal = getModuleSignal(dp.item, modIdx)
+            if (!signal) return null
+            const sourceY = getTopY(signal.label)
+
+            return (
+              <g key={`top-wire-${dp.item.id}-${modIdx}`}>
+                <path
+                  d={`M ${cx} ${topH - 2} L ${cx} ${sourceY + 6} Q ${cx} ${sourceY} ${cx + 3} ${sourceY}`}
+                  fill="none"
+                  stroke={signal.color}
+                  strokeWidth={1.8}
+                  strokeLinecap="round"
+                  opacity={0.9}
+                />
+                <circle cx={cx + 3} cy={sourceY} r={2} fill={signal.color} stroke="white" strokeWidth={0.5} />
+                {/* Зубец гребёнки */}
+                <rect x={cx - 2.5} y={sourceY - 2} width={5} height={6} rx={1} fill={signal.color} opacity={0.85} />
+              </g>
+            )
+          })
+        )}
+      </svg>
+    </div>
+  )
+}
+
 // ─── РЯД УСТРОЙСТВ ───
 function DeviceRow({
   row,
@@ -827,6 +1017,9 @@ function DeviceRow({
       <div className="text-[9px] text-gray-400 font-mono mb-0.5 self-start ml-1">
         Ряд {rowIndex + 1}
       </div>
+
+      {/* Верхняя разводка (приход) */}
+      <TopWiring items={row} supplyPhases={supplyPhases} rowIndex={rowIndex} />
 
       {/* DIN-рейка под устройствами */}
       <div className="relative">
