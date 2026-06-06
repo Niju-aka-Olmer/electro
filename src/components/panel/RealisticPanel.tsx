@@ -537,13 +537,13 @@ function DinRail({ width }: { width: number }) {
   )
 }
 
-// ─── ШИНЫ И РАСКЛЮЧЕНИЕ (L/N/PE ПРОВОДА МЕЖДУ УСТРОЙСТВАМИ) ───
-function BusBars({ items, supplyPhases }: { items: PanelItem[]; supplyPhases: 1 | 3 }) {
+// ─── НИЖНЯЯ РАЗВОДКА (уход) — индивидуальные выходы на нагрузку ───
+function BottomWiring({ items, supplyPhases }: { items: PanelItem[]; supplyPhases: 1 | 3 }) {
   const totalWidth = items.reduce((s, i) => s + i.modules * MOD_W, 0)
   const is3Phase = supplyPhases === 3
-  const busH = 90
+  const boxH = 100
 
-  // Позиции устройств в ряду
+  // Позиции устройств
   const devicePositions: { x: number; width: number; item: PanelItem }[] = []
   let pos = 0
   for (const item of items) {
@@ -551,13 +551,9 @@ function BusBars({ items, supplyPhases }: { items: PanelItem[]; supplyPhases: 1 
     pos += item.modules * MOD_W
   }
 
-  // Какой сигнал на каждом модуле устройства
   function getModuleSignal(item: PanelItem, modIdx: number): { label: string; color: string } | null {
-    // Для УЗО/диф: последний полюс — N, остальные — фаза
     if (item.type === 'rcd' || item.type === 'diff_breaker') {
-      if (item.poles >= 2 && modIdx === item.poles - 1) {
-        return { label: 'N', color: '#3498db' }
-      }
+      if (item.poles >= 2 && modIdx === item.poles - 1) return { label: 'N', color: '#3498db' }
     }
     if (item.poles === 1) return { label: 'L', color: '#e74c3c' }
     if (item.poles === 2) {
@@ -578,230 +574,137 @@ function BusBars({ items, supplyPhases }: { items: PanelItem[]; supplyPhases: 1 
     return null
   }
 
-  // Y-позиции шин
-  const busY = {
-    L: 20,
-    L1: 12, L2: 20, L3: 28,
-    N: 48,
-    PE: 70,
+  // Есть ли N у устройства (2P, 4P, или RCD с 2P+)
+  function hasN(item: PanelItem): boolean {
+    if (item.type === 'rcd' || item.type === 'diff_breaker') return item.poles >= 2
+    return item.poles === 2 || item.poles === 4
   }
 
-  function getBusY(label: string): number {
-    if (is3Phase) {
-      if (label === 'L' || label === 'L1') return busY.L1
-      if (label === 'L2') return busY.L2
-      if (label === 'L3') return busY.L3
-      if (label === 'N') return busY.N
-      return busY.PE
-    }
-    if (label === 'L' || label === 'L1') return busY.L
-    if (label === 'N') return busY.N
-    return busY.PE
+  // Есть ли фазные полюса у устройства
+  function phaseCount(item: PanelItem): number {
+    if (item.type === 'rcd' || item.type === 'diff_breaker') return item.poles >= 2 ? item.poles - 1 : item.poles
+    if (item.poles >= 2) return item.poles - 1
+    return item.poles
   }
 
-  function getBusColor(label: string): string {
-    if (label === 'L' || label === 'L1') return '#e74c3c'
-    if (label === 'L2') return '#f39c12'
-    if (label === 'L3') return '#9b59b6'
-    if (label === 'N') return '#3498db'
-    return '#f1c40f'
+  // N-шина и PE-шина (общие для всех)
+  const nBusY = 60
+  const peBusY = 82
+
+  // Центр устройства по X
+  function devCenter(dp: { x: number; width: number }): number {
+    return dp.x + dp.width / 2
   }
 
   return (
-    <div className="relative" style={{ width: totalWidth, height: busH }}>
-      <svg width={totalWidth} height={busH} viewBox={`0 0 ${totalWidth} ${busH}`} xmlns="http://www.w3.org/2000/svg">
-        {/* === ФОН (внутренняя панель) === */}
-        <rect x={0} y={0} width={totalWidth} height={busH} fill="rgba(0,0,0,0.02)" rx={2} />
+    <div className="relative" style={{ width: totalWidth, height: boxH }}>
+      <svg width={totalWidth} height={boxH} viewBox={`0 0 ${totalWidth} ${boxH}`} xmlns="http://www.w3.org/2000/svg">
+        {/* === ФОН === */}
+        <rect x={0} y={0} width={totalWidth} height={boxH} fill="rgba(0,0,0,0.01)" rx={2} />
 
-        {/* === ВЕРТИКАЛЬНЫЕ ПРОВОДА ОТ КАЖДОГО МОДУЛЯ К ШИНАМ === */}
-        {devicePositions.map((dp) =>
-          Array.from({ length: dp.item.modules }).map((_, modIdx) => {
-            const cx = dp.x + modIdx * MOD_W + MOD_W / 2
-            const signal = getModuleSignal(dp.item, modIdx)
-            if (!signal) return null
-            const targetY = getBusY(signal.label)
+        {/* === N ШИНА (общая нулевая) === */}
+        <rect x={0} y={nBusY} width={totalWidth} height={5} rx={2} fill="#3498db" opacity={0.8} />
+        <text x={totalWidth - 4} y={nBusY + 4} textAnchor="end" fontSize={7} fill="white" fontWeight="bold">N</text>
+        <text x={6} y={nBusY + 4} fontSize={7} fill="white" fontWeight="bold" opacity={0.9}>N</text>
 
-            return (
-              <g key={`wire-${dp.item.id}-${modIdx}`}>
-                {/* Основной провод от клеммы устройства до шины */}
-                <path
-                  d={`M ${cx} 2 L ${cx} ${targetY - 4} Q ${cx} ${targetY} ${cx - 3} ${targetY}`}
-                  fill="none"
-                  stroke={signal.color}
-                  strokeWidth={1.8}
-                  strokeLinecap="round"
-                  opacity={0.9}
-                />
-                {/* Изоляция у клеммы (утолщение) */}
-                <line
-                  x1={cx} y1={2} x2={cx} y2={10}
-                  stroke={signal.color}
-                  strokeWidth={4}
-                  strokeLinecap="round"
-                  opacity={0.2}
-                />
-                {/* Блик на проводе */}
-                <line
-                  x1={cx + 0.5} y1={10} x2={cx + 0.5} y2={targetY - 8}
-                  stroke="white"
-                  strokeWidth={0.5}
-                  opacity={0.15}
-                />
-                {/* Точка соединения с шиной */}
-                <circle cx={cx - 3} cy={targetY} r={2} fill={signal.color} stroke="white" strokeWidth={0.5} />
-              </g>
-            )
-          })
-        )}
-
-        {/* === ПЕРЕМЫЧКИ МЕЖДУ УСТРОЙСТВАМИ (DAISY-CHAIN) === */}
-        {devicePositions.slice(0, -1).map((dp, i) => {
-          const next = devicePositions[i + 1]
-          const fromX = dp.x + dp.width
-          const toX = next.x
-          const midX = (fromX + toX) / 2
-          const gap = toX - fromX
-          if (gap > MOD_W * 1.5) return null
-
-          // Общие сигналы между соседними устройствами
-          const commonSignals: { label: string; color: string }[] = []
-          const fromSignals = Array.from({ length: dp.item.modules }).map((_, mi) => getModuleSignal(dp.item, mi))
-          const toSignals = Array.from({ length: next.item.modules }).map((_, mi) => getModuleSignal(next.item, mi))
-
-          const fromL = fromSignals.find(s => s?.label === 'L' || s?.label === 'L1')
-          const toL = toSignals.find(s => s?.label === 'L' || s?.label === 'L1')
-          if (fromL && toL) commonSignals.push(fromL)
-
-          const fromN = fromSignals.find(s => s?.label === 'N')
-          const toN = toSignals.find(s => s?.label === 'N')
-          if (fromN && toN) commonSignals.push(fromN)
-
-          return commonSignals.map((sig) => {
-            const wireY = 4 + (sig.label === 'N' ? 8 : 0)
-            return (
-              <g key={`jumper-${i}-${sig.label}`}>
-                <path
-                  d={`M ${fromX} ${wireY} Q ${midX} ${wireY - 6} ${toX} ${wireY}`}
-                  fill="none"
-                  stroke={sig.color}
-                  strokeWidth={1.2}
-                  strokeLinecap="round"
-                  opacity={0.7}
-                  strokeDasharray={sig.label === 'N' ? '2,2' : 'none'}
-                />
-                <circle cx={fromX} cy={wireY} r={1.2} fill={sig.color} opacity={0.7} />
-                <circle cx={toX} cy={wireY} r={1.2} fill={sig.color} opacity={0.7} />
-              </g>
-            )
-          })
-        })}
-
-        {/* === ГОРИЗОНТАЛЬНЫЕ ШИНЫ === */}
-        {/* L / L1 шина */}
-        <rect
-          x={0} y={is3Phase ? busY.L1 : busY.L}
-          width={totalWidth}
-          height={5}
-          rx={2}
-          fill="#e74c3c"
-          opacity={0.85}
-        />
-        <text x={totalWidth - 4} y={is3Phase ? busY.L1 + 4 : busY.L + 4} textAnchor="end" fontSize={7} fill="white" fontWeight="bold">
-          {is3Phase ? 'L1' : 'L'}
-        </text>
-
-        {/* L2 шина (3-фазные) */}
-        {is3Phase && (
-          <>
-            <rect x={0} y={busY.L2} width={totalWidth} height={5} rx={2} fill="#f39c12" opacity={0.85} />
-            <text x={totalWidth - 4} y={busY.L2 + 4} textAnchor="end" fontSize={7} fill="white" fontWeight="bold">L2</text>
-          </>
-        )}
-
-        {/* L3 шина (3-фазные) */}
-        {is3Phase && (
-          <>
-            <rect x={0} y={busY.L3} width={totalWidth} height={5} rx={2} fill="#9b59b6" opacity={0.85} />
-            <text x={totalWidth - 4} y={busY.L3 + 4} textAnchor="end" fontSize={7} fill="white" fontWeight="bold">L3</text>
-          </>
-        )}
-
-        {/* N шина */}
-        <rect x={0} y={busY.N} width={totalWidth} height={5} rx={2} fill="#3498db" opacity={0.85} />
-        <text x={totalWidth - 4} y={busY.N + 4} textAnchor="end" fontSize={7} fill="white" fontWeight="bold">N</text>
-
-        {/* PE шина (жёлто-зелёная) */}
-        <rect x={0} y={busY.PE} width={totalWidth} height={5} rx={2} fill="#f1c40f" opacity={0.85} />
+        {/* === PE ШИНА (общая земля) === */}
+        <rect x={0} y={peBusY} width={totalWidth} height={5} rx={2} fill="#f1c40f" opacity={0.8} />
         {Array.from({ length: Math.ceil(totalWidth / 16) }).map((_, i) => (
-          <rect key={i} x={i * 16} y={busY.PE} width={8} height={5} fill="#2ecc71" opacity={0.5} />
+          <rect key={i} x={i * 16} y={peBusY} width={8} height={5} fill="#2ecc71" opacity={0.4} />
         ))}
-        <text x={totalWidth - 4} y={busY.PE + 4} textAnchor="end" fontSize={7} fill="#333" fontWeight="bold">PE</text>
+        <text x={totalWidth - 4} y={peBusY + 4} textAnchor="end" fontSize={7} fill="#333" fontWeight="bold">PE</text>
+        <text x={6} y={peBusY + 4} fontSize={7} fill="#333" fontWeight="bold" opacity={0.9}>PE</text>
 
-        {/* === ЗУБЦЫ ГРЕБЁНКИ (подвод к клеммам) === */}
-        {devicePositions.map((dp) =>
-          Array.from({ length: dp.item.modules }).map((_, modIdx) => {
-            const cx = dp.x + modIdx * MOD_W + MOD_W / 2
-            const signal = getModuleSignal(dp.item, modIdx)
-            if (!signal) return null
-            const targetY = getBusY(signal.label)
-            return (
-              <g key={`tooth-${dp.item.id}-${modIdx}`}>
-                <rect
-                  x={cx - 2.5}
-                  y={targetY - 4}
-                  width={5}
-                  height={8}
-                  rx={1}
-                  fill={signal.color}
-                  opacity={0.9}
-                />
-              </g>
-            )
-          })
-        )}
-
-        {/* === МАРКЕР ПРОХОДА N ЧЕРЕЗ УЗО/ДИФ === */}
+        {/* === ИНДИВИДУАЛЬНЫЕ ВЫХОДЫ ДЛЯ КАЖДОГО УСТРОЙСТВА === */}
         {devicePositions.map((dp) => {
-          const isRcd = dp.item.type === 'rcd' || dp.item.type === 'diff_breaker'
-          if (!isRcd || dp.item.poles < 2) return null
-          const nModIdx = dp.item.poles - 1
-          const nCx = dp.x + nModIdx * MOD_W + MOD_W / 2
+          const cx = devCenter(dp)
+          const phCnt = phaseCount(dp.item)
+          const hasNE = hasN(dp.item)
+          const signals = Array.from({ length: dp.item.modules }).map((_, mi) => getModuleSignal(dp.item, mi))
 
           return (
-            <g key={`rcd-n-${dp.item.id}`}>
-              {/* Верхняя метка — N входит в УЗО */}
-              <text x={nCx} y={8} textAnchor="middle" fontSize={5} fill="#3498db" fontWeight="bold" opacity={0.7}>
-                N↓
-              </text>
-              {/* Нижняя метка — N выходит из УЗО */}
-              <text x={nCx} y={busY.N - 8} textAnchor="middle" fontSize={5} fill="#3498db" fontWeight="bold" opacity={0.7}>
-                N↑
-              </text>
-              {/* Вертикальная пунктирная линия (проход сквозь устройство) */}
-              <line
-                x1={nCx} y1={10}
-                x2={nCx} y2={busY.N - 12}
+            <g key={`out-${dp.item.id}`}>
+              {/* Фазные провода — от модулей устройства вниз */}
+              {signals.map((sig, mi) => {
+                if (!sig || sig.label === 'N') return null
+                const wireX = dp.x + mi * MOD_W + MOD_W / 2
+                return (
+                  <g key={`lwire-${mi}`}>
+                    {/* Провод от клеммы вниз */}
+                    <path
+                      d={`M ${wireX} 2 L ${wireX} ${boxH - 6}`}
+                      fill="none"
+                      stroke={sig.color}
+                      strokeWidth={1.8}
+                      strokeLinecap="round"
+                      opacity={0.9}
+                    />
+                    {/* Изоляция у клеммы */}
+                    <line x1={wireX} y1={2} x2={wireX} y2={10} stroke={sig.color} strokeWidth={4} strokeLinecap="round" opacity={0.2} />
+                    {/* Метка фазы на конце */}
+                    <text x={wireX} y={boxH - 2} textAnchor="middle" fontSize={5} fill={sig.color} fontWeight="bold">{sig.label}</text>
+                  </g>
+                )
+              })}
+
+              {/* N провод: от N шины вниз, или от устройства (если 2P/4P) */}
+              <path
+                d={`M ${cx} ${hasNE ? 2 : nBusY} L ${cx} ${boxH - 6}`}
+                fill="none"
                 stroke="#3498db"
-                strokeWidth={0.8}
-                strokeDasharray="2,3"
-                opacity={0.3}
+                strokeWidth={1.5}
+                strokeLinecap="round"
+                opacity={0.85}
               />
+              {hasNE && (
+                <>
+                  {/* Если N через устройство — изоляция у клеммы */}
+                  <line x1={cx} y1={2} x2={cx} y2={10} stroke="#3498db" strokeWidth={4} strokeLinecap="round" opacity={0.2} />
+                  {/* Соединение с N шиной (перемычка) */}
+                  <line x1={cx} y1={nBusY - 8} x2={cx} y2={nBusY + 2} stroke="#3498db" strokeWidth={1} strokeDasharray="1,2" opacity={0.35} />
+                </>
+              )}
+              {!hasNE && (
+                /* 1P: N берётся прямо с N шины */
+                <circle cx={cx} cy={nBusY} r={2} fill="#3498db" opacity={0.8} />
+              )}
+              <text x={cx} y={boxH - 2} textAnchor="middle" fontSize={5} fill="#3498db" fontWeight="bold">N</text>
+
+              {/* PE провод: от PE шины вниз */}
+              <path
+                d={`M ${cx} ${peBusY} L ${cx} ${boxH - 6}`}
+                fill="none"
+                stroke="#f1c40f"
+                strokeWidth={1.5}
+                strokeLinecap="round"
+                opacity={0.85}
+              />
+              <circle cx={cx} cy={peBusY} r={2} fill="#f1c40f" opacity={0.8} />
+              <text x={cx} y={boxH - 2} textAnchor="middle" fontSize={5} fill="#333" fontWeight="bold" dy={0.5}>PE</text>
+
+              {/* Группирующая скобка (показывает, что провода — один кабель на нагрузку) */}
+              <path
+                d={`M ${cx - phCnt * 6 - 2} ${boxH - 14} L ${cx - phCnt * 6 - 2} ${boxH - 4} L ${cx + phCnt * 6 + 2} ${boxH - 4} L ${cx + phCnt * 6 + 2} ${boxH - 14}`}
+                fill="none"
+                stroke="#888"
+                strokeWidth={0.6}
+                opacity={0.4}
+              />
+
+              {/* Название линии (нагрузка) */}
+              <text
+                x={cx}
+                y={boxH - 8}
+                textAnchor="middle"
+                fontSize={5.5}
+                fill="#555"
+                fontWeight="bold"
+              >
+                {dp.item.label.length > 18 ? dp.item.label.slice(0, 16) + '..' : dp.item.label}
+              </text>
             </g>
           )
         })}
-
-        {/* === ПОДПИСИ НА ШИНАХ (слева) === */}
-        {is3Phase ? (
-          <>
-            <text x={6} y={busY.L1 + 4} fontSize={6} fill="white" fontWeight="bold" opacity={0.9}>L1</text>
-            <text x={6} y={busY.L2 + 4} fontSize={6} fill="white" fontWeight="bold" opacity={0.9}>L2</text>
-            <text x={6} y={busY.L3 + 4} fontSize={6} fill="white" fontWeight="bold" opacity={0.9}>L3</text>
-          </>
-        ) : (
-          <text x={6} y={busY.L + 4} fontSize={6} fill="white" fontWeight="bold" opacity={0.9}>L</text>
-        )}
-        <text x={6} y={busY.N + 4} fontSize={6} fill="white" fontWeight="bold" opacity={0.9}>N</text>
-        <text x={6} y={busY.PE + 4} fontSize={6} fill="#333" fontWeight="bold" opacity={0.9}>PE</text>
       </svg>
     </div>
   )
@@ -1037,8 +940,8 @@ function DeviceRow({
         </DndContext>
       </div>
 
-      {/* Гребёнка + шины под устройствами */}
-      <BusBars items={row} supplyPhases={supplyPhases} />
+      {/* Нижняя разводка — индивидуальные выходы */}
+      <BottomWiring items={row} supplyPhases={supplyPhases} />
     </div>
   )
 }
