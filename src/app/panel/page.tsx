@@ -31,7 +31,7 @@ function buildSpec(inOrderIds: string[], result: CalculationResult): SpecRow[] {
   if (loadBreakSwitch) byId.set(loadBreakSwitch.id, loadBreakSwitch)
   for (const d of devices) byId.set(d.id, d)
 
-  let qfIndex = 1
+  let qfIndex = 2 // QF2 — первый групповой автомат после вводного (QF1)
   const rows: SpecRow[] = []
 
   for (const id of inOrderIds) {

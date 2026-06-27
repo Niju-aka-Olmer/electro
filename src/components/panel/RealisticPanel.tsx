@@ -21,13 +21,11 @@ interface PanelItem {
   rating: number
   character: string
   poles: number
+  ref: string // QF1, QF2, F1, AD1, QS1 — единый номер для SVG и таблицы
 }
 
-function getDeviceRef(item: PanelItem, index: number): string {
-  if (item.type === 'load_break_switch') return 'QS1'
-  if (item.type === 'rcd') return 'F1'
-  if (item.type === 'diff_breaker') return 'AD1'
-  return `QF${index}`
+function getDeviceRef(item: PanelItem): string {
+  return item.ref
 }
 
 // ─── SVG-ФИЛЬТРЫ (один раз для всех) ───
@@ -220,11 +218,11 @@ function Vents({ x, y, height }: { x: number; y: number; height: number }) {
 }
 
 // ─── КОМПОНЕНТ УСТРОЙСТВА ───
-function DeviceSVG({ item, index }: { item: PanelItem; index: number }) {
+function DeviceSVG({ item }: { item: PanelItem }) {
   const w = item.modules * MOD_W
   const h = DEV_H
   const cx = w / 2
-  const ref = getDeviceRef(item, index)
+  const ref = getDeviceRef(item)
 
   // Настройки в зависимости от типа
   let config: {
@@ -485,7 +483,7 @@ function DeviceSVG({ item, index }: { item: PanelItem; index: number }) {
 }
 
 // ─── КОМПОНЕНТ ДЛЯ DND-СОРТИРОВКИ ───
-function SortableDevice({ item, index }: { item: PanelItem; index: number }) {
+function SortableDevice({ item }: { item: PanelItem }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id })
   const w = item.modules * MOD_W
 
@@ -501,7 +499,7 @@ function SortableDevice({ item, index }: { item: PanelItem; index: number }) {
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
-      <DeviceSVG item={item} index={index} />
+      <DeviceSVG item={item} />
     </div>
   )
 }
@@ -932,8 +930,8 @@ function DeviceRow({
         <DndContext collisionDetection={closestCenter} onDragEnd={onDragEnd}>
           <SortableContext items={row.map(i => i.id)} strategy={horizontalListSortingStrategy}>
             <div className="flex" style={{ marginTop: -DIN_H - 6, marginBottom: -6 }}>
-              {row.map((item, idx) => (
-                <SortableDevice key={item.id} item={item} index={idx} />
+              {row.map((item) => (
+                <SortableDevice key={item.id} item={item} />
               ))}
             </div>
           </SortableContext>
@@ -996,6 +994,7 @@ export function RealisticPanel({
 
   useEffect(() => {
     const newItems: PanelItem[] = []
+    let qfCounter = 2 // QF2 — первый групповой автомат после вводного
 
     // Рубильник
     if (result.loadBreakSwitch) {
@@ -1003,6 +1002,7 @@ export function RealisticPanel({
       newItems.push({
         id: ls.id,
         type: 'load_break_switch',
+        ref: 'QS1',
         label: 'Мастер-выключатель',
         sublabel: `${ls.rating}А`,
         modules: ls.modules,
@@ -1018,6 +1018,7 @@ export function RealisticPanel({
     newItems.push({
       id: mb.id,
       type: 'main_breaker',
+      ref: 'QF1',
       label: mb.group,
       sublabel: `${mb.rating}А`,
       modules: mb.modules,
@@ -1034,6 +1035,9 @@ export function RealisticPanel({
       newItems.push({
         id: d.id,
         type: d.type,
+        ref: isRcd
+          ? (d as RCD).type === 'diff_breaker' ? 'AD1' : 'F1'
+          : `QF${qfCounter++}`,
         label: isRcd
           ? (d as RCD).protectedGroups.join(', ')
           : (d as CircuitBreaker).group,
