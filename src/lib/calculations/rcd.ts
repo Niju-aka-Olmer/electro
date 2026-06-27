@@ -121,12 +121,33 @@ export function generateRCDStrategy(
     const lightBreakers = groupBreakers.filter(b => b.id.startsWith(room.id) && b.id.includes('light'))
     const loadBreakers = groupBreakers.filter(b => b.id.startsWith(room.id) && b.id.includes('load'))
 
-    if (bathroomStrategy === 'separate') {
-      // Вариант Б: 2 отдельных дифа — на розетки и на свет
-      const result: RCD[] = []
+    // Тёплый пол — всегда отдельный диф (ПУЭ 7.1.84)
+    const floorHeatingBreakers = loadBreakers.filter(b => b.id.includes('electric_floor'))
+    const otherLoadBreakers = loadBreakers.filter(b => !b.id.includes('electric_floor'))
 
-      if (socketBreakers.length > 0 || loadBreakers.length > 0) {
-        const allPowerBreakers = [...socketBreakers, ...loadBreakers]
+    const result: RCD[] = []
+
+    // Отдельный дифавтомат на тёплый пол в мокрой зоне
+    if (floorHeatingBreakers.length > 0) {
+      const floorRating = Math.max(...floorHeatingBreakers.map(b => b.rating), 10)
+      result.push(createDiffBreaker(
+        `diff_${room.id}_floor`,
+        Math.min(floorRating, 16) as 10 | 25 | 40 | 63,
+        10,
+        `${room.name} (тёплый пол)`,
+        `Дифавтомат ${Math.min(floorRating, 16)}А/10мА на тёплый пол в ${room.name}.\n` +
+        `ПУЭ 7.1.84: нагревательные кабели/маты во влажных зонах — отдельная линия с УЗО 10мА.\n` +
+        `Альтернатива (ГОСТ Р 50571.7.701): при наличии ДСУП (доп. уравнивание потенциалов) ` +
+        `и экранированного кабеля — допускается УЗО 30мА, если ток утечки <0.3мА/А нагрузки. ` +
+        `Для 6-10А это <3мА, что значительно ниже 10мА — вариант возможен, ` +
+        `но ПУЭ 7.1.83-84 предписывает 10мА в мокрых зонах.`
+      ))
+    }
+
+    if (bathroomStrategy === 'separate') {
+      // Вариант Б: отдельные дифавтоматы на розетки/технику и на свет
+      if (socketBreakers.length > 0 || otherLoadBreakers.length > 0) {
+        const allPowerBreakers = [...socketBreakers, ...otherLoadBreakers]
         const maxRating = Math.max(...allPowerBreakers.map(b => b.rating), 16)
         result.push(createDiffBreaker(
           `diff_${room.id}_power`,
@@ -153,22 +174,23 @@ export function generateRCDStrategy(
       return result
     }
 
-    // Вариант А (economy): один диф на всё влажное помещение
-    const roomBreakers = groupBreakers.filter(b => b.id.startsWith(room.id))
-    const maxRating = Math.max(...roomBreakers.map(b => b.rating), 16)
-    const diffRating = Math.min(maxRating, 25) as 10 | 25 | 40 | 63
+    // Вариант А (economy): один диф на всё, кроме тёплого пола
+    const otherBreakers = [...socketBreakers, ...otherLoadBreakers, ...lightBreakers]
+    if (otherBreakers.length > 0) {
+      const maxRating = Math.max(...otherBreakers.map(b => b.rating), 16)
+      const diffRating = Math.min(maxRating, 25) as 10 | 25 | 40 | 63
+      result.push(createDiffBreaker(
+        `diff_${room.id}`,
+        diffRating,
+        10,
+        room.name,
+        `Дифавтомат ${diffRating}А/10мА в ${room.name} — защищает все линии, кроме тёплого пола. ` +
+        `Эконом-вариант: один диф на розетки, свет и технику. ` +
+        `При срабатывании всё помещение обесточивается (кроме тёплого пола), ПУЭ 7.1.83.`
+      ))
+    }
 
-    // Этот диф защищает все группы в помещении
-    // (автоматы на розетки, свет и технику стоят после него)
-    return [createDiffBreaker(
-      `diff_${room.id}`,
-      diffRating,
-      10,
-      room.name,
-      `Дифавтомат ${diffRating}А/10мА в ${room.name} — защищает все линии в помещении. ` +
-      `Эконом-вариант: один диф на розетки, свет и технику. ` +
-      `При срабатывании всё помещение обесточивается (ПУЭ 7.1.83).`
-    )]
+    return result
   }
 
   // Для маленьких квартир (≤8 групп) — одно вводное УЗО

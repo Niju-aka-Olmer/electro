@@ -107,7 +107,7 @@ export function calculateAll(input: CalculationInput): CalculationResult {
   const diffRoomIds = new Set<string>()
   for (const d of rcdDevices) {
     if (d.type === 'diff_breaker') {
-      const m = d.id.match(/^diff_(.+?)(?:_power|_light)?$/)
+      const m = d.id.match(/^diff_(.+?)(?:_(?:power|light|floor))?$/)
       if (m) diffRoomIds.add(m[1])
     }
   }
