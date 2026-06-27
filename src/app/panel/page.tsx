@@ -131,6 +131,16 @@ export default function PanelPage() {
   }, [panelOrder, result])
 
   return (
+    <>
+      <style>{`
+        @media print {
+          .no-print { display: none !important; }
+          body { background: white !important; color: black !important; }
+          .print-scheme { break-inside: avoid; }
+          .print-spec { break-inside: avoid; }
+          @page { margin: 15mm; }
+        }
+      `}</style>
     <div className="mx-auto max-w-6xl px-4 py-12">
       {/* Шапка */}
       <div className="mb-8 flex items-start justify-between">
@@ -140,16 +150,27 @@ export default function PanelPage() {
             {supplyPhases === 3 ? '3 фазы' : '1 фаза'} · {recommendedPanelModules} модулей · {panelRows} ряда
           </p>
         </div>
-        <Link
-          href="/calculator"
-          className="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm text-text-secondary transition-colors hover:bg-bg-elevated"
-        >
-          ← Назад к расчёту
-        </Link>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => window.print()}
+            title="Распечатать"
+            className="no-print inline-flex items-center justify-center rounded-lg border border-border p-2 text-text-secondary transition-colors hover:bg-bg-elevated"
+          >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+            </svg>
+          </button>
+          <Link
+            href="/calculator"
+            className="no-print inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm text-text-secondary transition-colors hover:bg-bg-elevated"
+          >
+            ← Назад к расчёту
+          </Link>
+        </div>
       </div>
 
       {/* Схема щитка */}
-      <div className="mb-8 overflow-x-auto rounded-xl bg-transparent">
+      <div className="print-scheme mb-8 overflow-x-auto rounded-xl bg-transparent">
         <h2 className="mb-4 text-lg font-semibold font-display">Схема щитка (Интерактивная)</h2>
         <p className="mb-4 text-sm text-text-secondary">
           Перетаскивайте элементы для изменения порядка. Номера в спецификации синхронизируются.
@@ -158,7 +179,7 @@ export default function PanelPage() {
       </div>
 
       {/* Спецификация (по порядку щитка) */}
-      <div className="mb-8 rounded-xl border border-border bg-bg-elevated p-6">
+      <div className="print-spec mb-8 rounded-xl border border-border bg-bg-elevated p-6">
         <h2 className="mb-4 text-lg font-semibold font-display">Спецификация</h2>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -245,5 +266,6 @@ export default function PanelPage() {
         </div>
       )}
     </div>
+    </>
   )
 }
