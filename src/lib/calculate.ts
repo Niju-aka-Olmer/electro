@@ -102,11 +102,24 @@ export function calculateAll(input: CalculationInput): CalculationResult {
   const rcdResult = generateRCDStrategy(input.rooms, allBreakers, input.bathroomStrategy ?? 'economy')
   const rcdDevices = rcdResult.devices
 
-  // 5. Расчёт щитка
-  const panelResult = calculatePanel(mainBreaker, allBreakers, rcdDevices)
+  // 5. Исключаем автоматы, уже защищённые дифавтоматами
+  // Дифавтомат = УЗО + автомат в одном корпусе — отдельный автомат после него не нужен
+  const diffRoomIds = new Set<string>()
+  for (const d of rcdDevices) {
+    if (d.type === 'diff_breaker') {
+      const m = d.id.match(/^diff_(.+?)(?:_power|_light)?$/)
+      if (m) diffRoomIds.add(m[1])
+    }
+  }
+  const standaloneBreakers = allBreakers.filter(b =>
+    !Array.from(diffRoomIds).some(roomId => b.id.startsWith(roomId + '_'))
+  )
+
+  // 6. Расчёт щитка (только standalone-автоматы, дифавтоматы уже учтены в rcdDevices)
+  const panelResult = calculatePanel(mainBreaker, standaloneBreakers, rcdDevices)
 
   // 6. Фазное распределение (для 3-фазных сетей)
-  const allDevicesForPhasing: (CircuitBreaker | RCD)[] = [...rcdDevices, ...allBreakers]
+  const allDevicesForPhasing: (CircuitBreaker | RCD)[] = [...rcdDevices, ...standaloneBreakers]
   const phaseAssignment = input.supplyPhases === 3
     ? assignPhases(mainBreaker, allDevicesForPhasing)
     : undefined
@@ -123,7 +136,7 @@ export function calculateAll(input: CalculationInput): CalculationResult {
     warnings.push('Добавьте хотя бы одно помещение для расчёта.')
   }
 
-  const totalLoadAmps = allBreakers.reduce((s, b) => s + b.rating, 0)
+  const totalLoadAmps = standaloneBreakers.reduce((s, b) => s + b.rating, 0)
   if (totalLoadAmps > input.meterAmps * 1.5) {
     warnings.push(
       `Сумма номиналов автоматов (${totalLoadAmps}А) больше вводного (${input.meterAmps}А) — это НОРМАЛЬНО. ` +
@@ -140,7 +153,7 @@ export function calculateAll(input: CalculationInput): CalculationResult {
   }
 
   // Всё собираем в результат
-  const allDevices: (CircuitBreaker | RCD)[] = [mainBreaker, ...rcdDevices, ...allBreakers]
+  const allDevices: (CircuitBreaker | RCD)[] = [mainBreaker, ...rcdDevices, ...standaloneBreakers]
 
   return {
     mainBreaker,
