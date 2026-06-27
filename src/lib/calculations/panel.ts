@@ -52,9 +52,14 @@ export function calculatePanel(
   // totalModules = только устройства на DIN-рейке
   const totalModules = mainModules + groupModules + rcdModules
 
-  // Выбор ближайшего типового щитка: округление до 12 (1 ряд = 12 модулей)
-  // Для 10 модулей → 12 (1 ряд), для 13 → 24 (2 ряда) и т.д.
-  const withReserve = Math.ceil(totalModules / 12) * 12
+  // Выбор ближайшего типового щитка с запасом
+  // Запас нужен для:
+  //   - теплового зазора между устройствами (плотная установка → перегрев)
+  //   - места под разводку проводов, нулевых шин, кросс-модулей внутри щита
+  //   - установки дополнительных устройств (реле напряжения, розетка на DIN-рейку, и т.д.)
+  // Для малых щитков (≤24 модулей) запас 30%, для больших — 20%
+  const reserveMultiplier = totalModules <= 24 ? 1.3 : 1.2
+  const withReserve = Math.ceil(totalModules * reserveMultiplier / 12) * 12
   const rows = Math.ceil(withReserve / 12)
 
   // Определение типа щитка
@@ -88,9 +93,13 @@ export function calculatePanel(
     ]
   }
 
+  const reservedModules = withReserve - totalModules
+
   const notes: string[] = [
     `Устройства на DIN-рейке: ${totalModules} модулей`,
     `Рекомендуемый щит: ${withReserve} мест (${rows} ряда по 12 модулей)`,
+    `Свободных мест (запас): ${reservedModules} модулей (${Math.round((totalModules <= 24 ? 1.3 : 1.2) * 100 - 100)}%)`,
+    `Запас предусмотрен для: теплового зазора, разводки проводов, установки реле напряжения, розетки на DIN-рейку и будущих устройств.`,
     `DIN-рейки: ${rows} шт.`,
     `Нулевая шина: ${neutralBusModules} шт. на рейке`,
     `PE шина — устанавливается отдельно на корпус щита`,
