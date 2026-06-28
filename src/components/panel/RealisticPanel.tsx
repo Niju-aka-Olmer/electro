@@ -25,6 +25,7 @@ interface PanelItem {
   character: string
   poles: number
   ref: string
+  protectedGroupIds: string[] // id защищаемых групп (только для RCD/diff)
 }
 
 // ─── ЦВЕТА ПО ТИПУ УСТРОЙСТВА ───
@@ -273,6 +274,65 @@ function BottomWiring({ items }: { items: PanelItem[] }) {
   )
 }
 
+// ─── ГРУППИРУЮЩИЕ СКОБКИ (УЗО/диф → автоматы) ───
+function GroupBrackets({ items, positions }: { items: PanelItem[]; positions: { x: number; w: number; item: PanelItem }[] }) {
+  // Находим все RCD/diff, у которых есть защищаемые группы
+  const parents = positions.filter(p => p.item.protectedGroupIds.length > 0)
+  if (parents.length === 0) return null
+
+  const totalWidth = items.reduce((s, i) => s + i.modules * MOD_W, 0)
+
+  const groups: { parent: typeof parents[0]; children: typeof positions }[] = []
+
+  for (const parent of parents) {
+    // Находим дочерние автоматы в том же ряду, чьи id есть в protectedGroupIds родителя
+    const children = positions.filter(p =>
+      p.item.id !== parent.item.id &&
+      p.item.protectedGroupIds.length === 0 && // только простые автоматы
+      parent.item.protectedGroupIds.some(gname => p.item.label.includes(gname) || gname.includes(p.item.label))
+    )
+    if (children.length > 0) {
+      groups.push({ parent, children })
+    }
+  }
+
+  if (groups.length === 0) return null
+
+  return (
+    <div className="relative" style={{ width: totalWidth, height: 14, marginBottom: -2 }}>
+      <svg width={totalWidth} height={14} viewBox={`0 0 ${totalWidth} 14`}>
+        {groups.map((g, gi) => {
+          const parentColor = g.parent.item.type === 'rcd' ? '#1976d2' : '#00838f'
+          const startX = g.parent.x
+          const endX = g.parent.x + g.parent.w
+          const childStartX = Math.min(...g.children.map(c => c.x))
+          const childEndX = Math.max(...g.children.map(c => c.x + c.w))
+          const bracketLeft = Math.min(startX, childStartX)
+          const bracketRight = Math.max(endX, childEndX)
+          const bracketW = bracketRight - bracketLeft
+
+          return (
+            <g key={`grp-${gi}`}>
+              {/* Горизонтальная линия под родителем и детьми */}
+              <rect x={bracketLeft} y={8} width={bracketW} height={2} rx={1} fill={parentColor} opacity={0.35} />
+              {/* Вертикальные засечки к родителю */}
+              <line x1={startX + g.parent.w / 2} y1={4} x2={startX + g.parent.w / 2} y2={9} stroke={parentColor} strokeWidth={1} opacity={0.35} />
+              {/* Вертикальные засечки к детям */}
+              {g.children.map((ch, ci) => (
+                <line key={`ch-${ci}`} x1={ch.x + ch.w / 2} y1={4} x2={ch.x + ch.w / 2} y2={9} stroke={parentColor} strokeWidth={0.7} opacity={0.25} />
+              ))}
+              {/* Подпись снизу */}
+              <text x={bracketLeft + bracketW / 2} y={13} textAnchor="middle" fontSize={6} fill={parentColor} opacity={0.7}>
+                {g.parent.item.ref} → {g.parent.item.label.substring(0, 20)}
+              </text>
+            </g>
+          )
+        })}
+      </svg>
+    </div>
+  )
+}
+
 // ─── DIN-РЕЙКА ───
 function DinRail({ width }: { width: number }) {
   return (
@@ -324,6 +384,8 @@ function DeviceRow({
             </DndContext>
           </div>
         </div>
+        {/* Логические связи УЗО/диф → автоматы */}
+        <GroupBrackets items={row} positions={buildPositions(row)} />
       </div>
 
       {/* Нижняя разводка */}
@@ -380,7 +442,7 @@ export function RealisticPanel({
         id: ls.id, type: 'load_break_switch', ref: 'QS1',
         label: 'Мастер-выкл.', sublabel: `${ls.rating}А`,
         modules: ls.modules, phase: ls.phase, rating: ls.rating,
-        character: '', poles: ls.poles,
+        character: '', poles: ls.poles, protectedGroupIds: [],
       })
     }
 
@@ -389,7 +451,7 @@ export function RealisticPanel({
       id: mb.id, type: 'main_breaker', ref: 'QF1',
       label: mb.group, sublabel: `${mb.rating}А`,
       modules: mb.modules, phase: mb.phase, rating: mb.rating,
-      character: mb.characteristic, poles: mb.poles,
+      character: mb.characteristic, poles: mb.poles, protectedGroupIds: [],
     })
 
     for (const d of result.devices) {
@@ -411,6 +473,7 @@ export function RealisticPanel({
         rating: isRcd ? (d as RCD).ratingAmps : (d as CircuitBreaker).rating,
         character: isRcd ? '' : (d as CircuitBreaker).characteristic,
         poles: d.poles,
+        protectedGroupIds: isRcd ? (d as RCD).protectedGroups : [],
       })
     }
 
