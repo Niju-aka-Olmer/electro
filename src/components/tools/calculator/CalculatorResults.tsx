@@ -88,20 +88,29 @@ export default function CalculatorResults() {
         </div>
         <div className="flex gap-2">
           <button
+            onClick={() => window.print()}
+            title="Распечатать"
+            className="no-print inline-flex items-center justify-center rounded-lg border border-border p-2 text-text-secondary transition-colors hover:bg-bg-elevated"
+          >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+            </svg>
+          </button>
+          <button
             onClick={() => setStep(2)}
-            className="rounded-lg border border-border px-4 py-2 text-sm text-text-secondary hover:border-accent-amber"
+            className="no-print rounded-lg border border-border px-4 py-2 text-sm text-text-secondary hover:border-accent-amber"
           >
             ← Назад
           </button>
           <button
             onClick={reset}
-            className="rounded-lg border border-border px-4 py-2 text-sm text-text-secondary hover:border-accent-danger"
+            className="no-print rounded-lg border border-border px-4 py-2 text-sm text-text-secondary hover:border-accent-danger"
           >
             Сбросить
           </button>
           <Link
             href="/panel"
-            className="inline-flex items-center gap-1.5 rounded-lg bg-accent-amber px-5 py-2 text-sm font-semibold text-white hover:bg-accent-amber/90"
+            className="no-print inline-flex items-center gap-1.5 rounded-lg bg-accent-amber px-5 py-2 text-sm font-semibold text-white hover:bg-accent-amber/90"
           >
             Перенести в Щиток →
           </Link>
