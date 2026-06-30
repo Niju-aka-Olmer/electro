@@ -456,6 +456,25 @@ export function RealisticPanel({
       character: mb.characteristic, poles: mb.poles, protectedGroupIds: [],
     })
 
+    // Оборудование щитка — сразу после вводного (реле напряжения, DIN-розетка и т.п.)
+    if (result.panelEquipment) {
+      for (const eq of result.panelEquipment) {
+        newItems.push({
+          id: `eq_${eq.id}`,
+          type: 'panel_equipment',
+          ref: '—',
+          label: eq.name,
+          sublabel: `${eq.modules} модуля`,
+          modules: eq.modules,
+          phase: undefined,
+          rating: 0,
+          character: '',
+          poles: 1,
+          protectedGroupIds: [],
+        })
+      }
+    }
+
     for (const d of result.devices) {
       if (d.id === 'main' || d.id === 'load_break') continue
       const isRcd = d.type === 'rcd' || d.type === 'diff_breaker'
@@ -477,25 +496,6 @@ export function RealisticPanel({
         poles: d.poles,
         protectedGroupIds: isRcd ? (d as RCD).protectedGroups : [],
       })
-    }
-
-    // Оборудование щитка без автомата (реле напряжения, DIN-розетка и т.п.)
-    if (result.panelEquipment) {
-      for (const eq of result.panelEquipment) {
-        newItems.push({
-          id: `eq_${eq.id}`,
-          type: 'panel_equipment',
-          ref: '—',
-          label: eq.name,
-          sublabel: `${eq.modules} модуля`,
-          modules: eq.modules,
-          phase: undefined,
-          rating: 0,
-          character: '',
-          poles: 1,
-          protectedGroupIds: [],
-        })
-      }
     }
 
     setItems(newItems)

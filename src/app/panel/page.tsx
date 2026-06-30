@@ -141,6 +141,12 @@ export default function PanelPage() {
     const defaultOrder: string[] = []
     if (result.loadBreakSwitch) defaultOrder.push(result.loadBreakSwitch.id)
     defaultOrder.push(result.mainBreaker.id)
+    // Оборудование щитка — сразу после вводного
+    if (result.panelEquipment) {
+      for (const eq of result.panelEquipment) {
+        defaultOrder.push(`eq_${eq.id}`)
+      }
+    }
     for (const d of result.devices) {
       if (d.id !== 'main' && d.id !== 'load_break') defaultOrder.push(d.id)
     }
