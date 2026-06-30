@@ -52,8 +52,6 @@ const SPECIAL_LOADS = [
   { value: 'ac', label: 'Кондиционер', typicalW: 2500 },
   { value: 'boiler', label: 'Водонагреватель', typicalW: 2000 },
   { value: 'electric_floor', label: 'Тёплый пол', typicalW: 1000 },
-  { value: 'din_rail_socket', label: 'Розетка на DIN-рейку', typicalW: 3500 },
-  { value: 'voltage_relay', label: 'Реле напряжения', typicalW: 0 },
   { value: 'ventilation', label: 'Приточная вентиляция', typicalW: 500 },
   { value: 'outdoor_socket', label: 'Уличная розетка', typicalW: 2000 },
   { value: 'sauna', label: 'Электросауна', typicalW: 6000 },
