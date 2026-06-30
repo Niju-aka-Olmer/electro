@@ -98,11 +98,19 @@ export function calculateAll(input: CalculationInput): CalculationResult {
   // 3. Групповые автоматы по комнатам
   const allBreakers: CircuitBreaker[] = input.rooms.flatMap(room => calcRoomBreakers(room))
 
-  // 4. Стратегия УЗО
+  // 4. Собираем оборудование щитка без автомата (реле напряжения, DIN-розетка и т.п.)
+  const panelEquipment = input.rooms.flatMap(room =>
+    room.loads
+      .filter(l => !l.hasSeparateGroup && l.modules > 0)
+      .map(l => ({ id: l.id, name: l.name, modules: l.modules }))
+  )
+  const extraModules = panelEquipment.reduce((sum, eq) => sum + eq.modules, 0)
+
+  // 5. Стратегия УЗО
   const rcdResult = generateRCDStrategy(input.rooms, allBreakers, input.bathroomStrategy ?? 'economy')
   const rcdDevices = rcdResult.devices
 
-  // 5. Исключаем автоматы, уже защищённые дифавтоматами
+  // 6. Исключаем автоматы, уже защищённые дифавтоматами
   // Дифавтомат = УЗО + автомат в одном корпусе — отдельный автомат после него не нужен
   const diffRoomIds = new Set<string>()
   for (const d of rcdDevices) {
@@ -115,10 +123,10 @@ export function calculateAll(input: CalculationInput): CalculationResult {
     !Array.from(diffRoomIds).some(roomId => b.id.startsWith(roomId + '_'))
   )
 
-  // 6. Расчёт щитка (только standalone-автоматы, дифавтоматы уже учтены в rcdDevices)
-  const panelResult = calculatePanel(mainBreaker, standaloneBreakers, rcdDevices)
+  // 7. Расчёт щитка (с учётом breakerless оборудования)
+  const panelResult = calculatePanel(mainBreaker, standaloneBreakers, rcdDevices, extraModules)
 
-  // 6. Фазное распределение (для 3-фазных сетей)
+  // 8. Фазное распределение (для 3-фазных сетей)
   const allDevicesForPhasing: (CircuitBreaker | RCD)[] = [...rcdDevices, ...standaloneBreakers]
   const phaseAssignment = input.supplyPhases === 3
     ? assignPhases(mainBreaker, allDevicesForPhasing)
@@ -131,9 +139,13 @@ export function calculateAll(input: CalculationInput): CalculationResult {
     mainBreaker.phase = phaseMap.get(mainBreaker.id)
   }
 
-  // 7. Валидация и предупреждения
+  // 9. Валидация и предупреждения
   if (input.rooms.length === 0) {
     warnings.push('Добавьте хотя бы одно помещение для расчёта.')
+  }
+
+  if (panelEquipment.length > 0) {
+    notes.push(`Оборудование щитка: ${panelEquipment.map(e => `${e.name} (${e.modules} м.)`).join(', ')} — учтено в модулях щита.`)
   }
 
   const totalLoadAmps = standaloneBreakers.reduce((s, b) => s + b.rating, 0)
@@ -164,6 +176,7 @@ export function calculateAll(input: CalculationInput): CalculationResult {
     totalModules: panelResult.totalModules,
     recommendedPanelModules: panelResult.withReserve,
     panelRows: panelResult.rows,
+    panelEquipment,
     warnings,
     notes: [...panelResult.notes, rcdResult.explanation, ...notes],
   }

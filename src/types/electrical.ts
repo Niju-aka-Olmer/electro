@@ -75,6 +75,14 @@ export interface ElectricalLoad {
   currentA: number    // ток, А
   isHighLoad: boolean // варочная, духовка, стиралка...
   hasSeparateGroup: boolean // отдельная группа обязательна
+  modules: number     // DIN-модулей в щите (для оборудования без автомата, напр. реле напряжения)
+}
+
+/** Оборудование щитка на DIN-рейке без собственного автомата */
+export interface PanelEquipment {
+  id: string
+  name: string
+  modules: number
 }
 
 export interface RoomConfig {
@@ -110,6 +118,7 @@ export interface CalculationResult {
   totalModules: number
   recommendedPanelModules: number // с запасом 20%
   panelRows: number
+  panelEquipment: PanelEquipment[]  // оборудование щитка без автомата
   warnings: string[]
   notes: string[]
 }

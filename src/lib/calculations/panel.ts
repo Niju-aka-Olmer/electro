@@ -39,7 +39,8 @@ function getDeviceModules(device: CircuitBreaker | RCD): number {
 export function calculatePanel(
   mainBreaker: CircuitBreaker,
   groupBreakers: CircuitBreaker[],
-  rcdDevices: RCD[]
+  rcdDevices: RCD[],
+  extraModules: number = 0
 ): PanelCalculation {
   // Сумма всех модулей
   const mainModules = getDeviceModules(mainBreaker)
@@ -49,8 +50,8 @@ export function calculatePanel(
   // Нулевые шины: 1 модуль на каждые 12 групп (НЕ входит в totalModules — это шина, не устройство)
   const neutralBusModules = Math.ceil(groupBreakers.length / 12)
   
-  // totalModules = только устройства на DIN-рейке
-  const totalModules = mainModules + groupModules + rcdModules
+  // totalModules = устройства + оборудование без автомата (реле напряжения, DIN-розетка и т.п.)
+  const totalModules = mainModules + groupModules + rcdModules + extraModules
 
   // Выбор ближайшего типового щитка с запасом
   // Запас нужен для:
@@ -104,6 +105,10 @@ export function calculatePanel(
     `Нулевая шина: ${neutralBusModules} шт. на рейке`,
     `PE шина — устанавливается отдельно на корпус щита`,
   ]
+
+  if (extraModules > 0) {
+    notes.push(`Оборудование без автомата: +${extraModules} модулей (реле напряжения, DIN-розетка и т.п.)`)
+  }
 
   if (rows > 3) {
     notes.push(`⚠️ Большой щит — рекомендуется встроенный вариант (AP) для скрытой установки`)

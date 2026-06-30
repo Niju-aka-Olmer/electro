@@ -65,7 +65,7 @@ export default function CalculatorResults() {
 
   if (!result) return null
 
-  const { mainBreaker, devices, totalModules, recommendedPanelModules, warnings, notes } = result
+  const { mainBreaker, devices, totalModules, recommendedPanelModules, panelEquipment, warnings, notes } = result
 
   const rcds = devices.filter(isRCD).filter(d => d.type === 'rcd')
   const diffDevices = devices.filter(isRCD).filter(d => d.type === 'diff_breaker')
@@ -118,12 +118,13 @@ export default function CalculatorResults() {
       </div>
 
       {/* Итого */}
-      <div className="grid gap-4 sm:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-5">
         {[
           { label: 'Модулей в щитке', value: `${totalModules}`, sub: 'мод.' },
           { label: 'Рекомендуемый щиток', value: `${recommendedPanelModules}`, sub: 'мод.' },
           { label: 'Автоматов', value: `${groupBreakers.length + 1}`, sub: 'шт.' },
           { label: 'УЗО/Диф', value: `${rcds.length + diffDevices.length}`, sub: 'шт.' },
+          { label: 'Оборудование щитка', value: `${panelEquipment?.length ?? 0}`, sub: panelEquipment && panelEquipment.length > 0 ? panelEquipment.map(e => e.name).join(', ') : '—' },
         ].map(s => (
           <div key={s.label} className="rounded-xl border border-border bg-bg-elevated p-4 text-center">
             <div className="text-2xl font-bold font-display text-accent-amber">{s.value}</div>

@@ -57,6 +57,12 @@ const SPECIAL_LOADS = [
   { value: 'sauna', label: 'Электросауна', typicalW: 6000 },
 ]
 
+/** Оборудование на DIN-рейке, не требующее отдельного автомата */
+const PANEL_EQUIPMENT = [
+  { value: 'voltage_relay', label: 'Реле напряжения', modules: 2 },
+  { value: 'din_rail_socket', label: 'Розетка на DIN-рейку', modules: 2 },
+]
+
 /** Popover с пояснением для систем заземления */
 const GroundingInfoPopover = () => {
   const [open, setOpen] = useState(false)
@@ -113,31 +119,54 @@ function RoomForm({ room, onSave, onCancel }: RoomFormProps) {
   const [socketGroups, setSocketGroups] = useState(room?.socketGroups ?? 2)
   const [lightingPoints, setLightingPoints] = useState(room?.lightingPoints ?? 2)
   const [loads, setLoads] = useState<
-    { id: string; name: string; powerW: number; currentA: number; isHighLoad: boolean; hasSeparateGroup: boolean }[]
+    { id: string; name: string; powerW: number; currentA: number; isHighLoad: boolean; hasSeparateGroup: boolean; modules: number }[]
   >(room?.loads ?? [])
 
   const selectedRoom = ROOM_TYPES.find(r => r.value === type)
 
   const toggleLoad = (loadId: string) => {
     const load = SPECIAL_LOADS.find(l => l.value === loadId)
-    if (!load) return
+    if (load) {
+      setLoads(prev => {
+        const exists = prev.find(l => l.id === loadId)
+        if (exists) return prev.filter(l => l.id !== loadId)
+        const currentA = +(load.typicalW / 220).toFixed(1)
+        return [
+          ...prev,
+          {
+            id: loadId,
+            name: load.label,
+            powerW: load.typicalW,
+            currentA,
+            isHighLoad: load.typicalW >= 2000,
+            hasSeparateGroup: true,
+            modules: 0,
+          },
+        ]
+      })
+      return
+    }
 
-    setLoads(prev => {
-      const exists = prev.find(l => l.id === loadId)
-      if (exists) return prev.filter(l => l.id !== loadId)
-      const currentA = +(load.typicalW / 220).toFixed(1)
-      return [
-        ...prev,
-        {
-          id: loadId,
-          name: load.label,
-          powerW: load.typicalW,
-          currentA,
-          isHighLoad: load.typicalW >= 2000,
-          hasSeparateGroup: true,
-        },
-      ]
-    })
+    // Оборудование щитка (breakerless)
+    const eq = PANEL_EQUIPMENT.find(e => e.value === loadId)
+    if (eq) {
+      setLoads(prev => {
+        const exists = prev.find(l => l.id === loadId)
+        if (exists) return prev.filter(l => l.id !== loadId)
+        return [
+          ...prev,
+          {
+            id: loadId,
+            name: eq.label,
+            powerW: 0,
+            currentA: 0,
+            isHighLoad: false,
+            hasSeparateGroup: false,
+            modules: eq.modules,
+          },
+        ]
+      })
+    }
   }
 
   const handleSave = () => {
@@ -239,6 +268,33 @@ function RoomForm({ room, onSave, onCancel }: RoomFormProps) {
               )}
             >
               {load.label} ({load.typicalW / 1000}кВт)
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Оборудование щитка (без автомата) */}
+      <div>
+        <label className="mb-2 flex items-center gap-2 text-sm text-text-secondary">
+          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="6" width="18" height="12" rx="1"/><path d="M7 6V4h10v2M9 14h6M12 11v3"/></svg>
+          Оборудование щитка (без автомата)
+        </label>
+        <p className="mb-2 text-xs text-text-muted">
+          Занимает место на DIN-рейке, запитывается от существующей группы.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {PANEL_EQUIPMENT.map(eq => (
+            <button
+              key={eq.value}
+              onClick={() => toggleLoad(eq.value)}
+              className={cn(
+                'rounded-lg border px-3 py-1.5 text-xs transition-all',
+                loads.find(l => l.id === eq.value)
+                  ? 'border-accent-amber bg-accent-amber/10 text-accent-amber'
+                  : 'border-border bg-bg-elevated text-text-secondary hover:border-border-accent'
+              )}
+            >
+              {eq.label} ({eq.modules} модуля)
             </button>
           ))}
         </div>

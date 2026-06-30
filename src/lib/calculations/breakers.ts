@@ -120,8 +120,19 @@ export function calcRoomBreakers(room: RoomConfig): CircuitBreaker[] {
 
 /**
  * Специальные нагрузки с фиксированными номиналами
+ * 
+ * `modules` — для оборудования, которое занимает место в щите,
+ * но не требует отдельного автомата (реле напряжения, DIN-розетка и т.п.)
  */
-export const STANDARD_LOADS: Record<string, { powerW: number; ratingA: BreakerRating; poles: 1 | 2; note: string }> = {
+export interface StandardLoadEntry {
+  powerW: number
+  ratingA: BreakerRating
+  poles: 1 | 2
+  note: string
+  modules?: number // DIN-модулей (для breakerless оборудования)
+}
+
+export const STANDARD_LOADS: Record<string, StandardLoadEntry> = {
   cooktop:       { powerW: 7000, ratingA: 32, poles: 2, note: 'Варочная поверхность' },
   oven:          { powerW: 3500, ratingA: 16, poles: 1, note: 'Духовой шкаф' },
   washer:        { powerW: 2500, ratingA: 16, poles: 1, note: 'Стиральная машина' },
@@ -130,8 +141,11 @@ export const STANDARD_LOADS: Record<string, { powerW: number; ratingA: BreakerRa
   boiler:        { powerW: 2000, ratingA: 16, poles: 1, note: 'Водонагреватель' },
   electric_floor: { powerW: 1000, ratingA: 10, poles: 1, note: 'Тёплый пол' },
   sauna:         { powerW: 6000, ratingA: 25, poles: 2, note: 'Электросауна' },
-  refrigerator:  { powerW: 300,  ratingA: 6,  poles: 1, note: 'Холодильник' },
+  refrigerator:  { powerW: 1000, ratingA: 16, poles: 1, note: 'Холодильник' },
   dryer:         { powerW: 2500, ratingA: 16, poles: 1, note: 'Сушильная машина' },
   outdoor_socket: { powerW: 2000, ratingA: 10, poles: 1, note: 'Уличная розетка' },
   ventilation:   { powerW: 500,  ratingA: 6,  poles: 1, note: 'Приточная вентиляция' },
+  // Оборудование щитка — занимает модули, но не требует автомата
+  voltage_relay:  { powerW: 0, ratingA: 6, poles: 2, note: 'Реле напряжения', modules: 2 },
+  din_rail_socket: { powerW: 0, ratingA: 16, poles: 1, note: 'Розетка на DIN-рейку', modules: 2 },
 }
