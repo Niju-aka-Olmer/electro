@@ -7,11 +7,8 @@ import { CSS } from '@dnd-kit/utilities'
 import type { CalculationResult, CircuitBreaker, RCD, PhaseId } from '@/types/electrical'
 
 // ─── КОНСТАНТЫ ───
-const MOD_W = 44   // ширина 1 модуля в px
-const DEV_H = 54   // высота карточки устройства
-const DIN_H = 6    // высота DIN-рейки
-const TOP_H = 48   // высота верхней разводки (ввод + шины)
-const BOT_H = 72   // высота нижней разводки (шины + выходы к нагрузкам)
+const MOD_W = 44
+const DEV_H = 52
 
 // ─── ТИПЫ ───
 interface PanelItem {
@@ -25,327 +22,154 @@ interface PanelItem {
   character: string
   poles: number
   ref: string
-  protectedGroupIds: string[] // id защищаемых групп (только для RCD/diff)
+  protectedGroupIds: string[]
 }
 
-// ─── ЦВЕТА ПО ТИПУ УСТРОЙСТВА ───
+// ─── ЦВЕТА ПО ТИПУ ───
 function devColor(type: string): { stripe: string; bg: string; text: string; label: string } {
   switch (type) {
-    case 'main_breaker':
-      return { stripe: 'bg-red-500', bg: 'bg-red-50', text: 'text-red-700', label: 'ВВОД' }
-    case 'load_break_switch':
-      return { stripe: 'bg-orange-500', bg: 'bg-orange-50', text: 'text-orange-700', label: 'РУБ' }
-    case 'rcd':
-      return { stripe: 'bg-blue-400', bg: 'bg-blue-50', text: 'text-blue-700', label: 'УЗО' }
-    case 'diff_breaker':
-      return { stripe: 'bg-cyan-500', bg: 'bg-cyan-50', text: 'text-cyan-700', label: 'ДИФ' }
-    case 'panel_equipment':
-      return { stripe: 'bg-gray-300', bg: 'bg-gray-100', text: 'text-gray-500', label: 'ОБ' }
-    default:
-      return { stripe: 'bg-gray-400', bg: 'bg-gray-50', text: 'text-gray-700', label: 'АВ' }
+    case 'main_breaker':    return { stripe: 'bg-red-500',    bg: 'bg-red-50',    text: 'text-red-700',    label: 'ВВОД' }
+    case 'load_break_switch':return { stripe: 'bg-orange-500', bg: 'bg-orange-50', text: 'text-orange-700', label: 'РУБ' }
+    case 'rcd':             return { stripe: 'bg-blue-400',   bg: 'bg-blue-50',   text: 'text-blue-700',   label: 'УЗО' }
+    case 'diff_breaker':    return { stripe: 'bg-cyan-500',   bg: 'bg-cyan-50',   text: 'text-cyan-700',   label: 'ДИФ' }
+    case 'panel_equipment': return { stripe: 'bg-gray-300',   bg: 'bg-gray-100',  text: 'text-gray-500',   label: 'ОБ' }
+    default:                return { stripe: 'bg-gray-400',   bg: 'bg-gray-50',   text: 'text-gray-700',   label: 'АВ' }
   }
 }
 
-// Сборка позиций устройств в ряду
-function buildPositions(items: PanelItem[]): { x: number; w: number; item: PanelItem }[] {
-  const pos: { x: number; w: number; item: PanelItem }[] = []
-  let cur = 0
-  for (const it of items) {
-    pos.push({ x: cur, w: it.modules * MOD_W, item: it })
-    cur += it.modules * MOD_W
-  }
-  return pos
-}
-
-// ─── ДРАГАБЕЛЬНАЯ КАРТОЧКА УСТРОЙСТВА ───
+// ─── КАРТОЧКА УСТРОЙСТВА (ЧИСТЫЙ CSS) ───
 function DeviceCard({ item }: { item: PanelItem }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id })
   const w = item.modules * MOD_W
   const c = devColor(item.type)
-
-  const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    zIndex: isDragging ? 100 : 1,
-    width: w,
-    height: DEV_H,
-    position: 'relative',
-    opacity: isDragging ? 0.9 : 1,
-  }
+  const isEq = item.type === 'panel_equipment'
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="flex-shrink-0 cursor-grab active:cursor-grabbing select-none">
+    <div
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      className="flex-shrink-0 cursor-grab active:cursor-grabbing select-none"
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        zIndex: isDragging ? 100 : 1,
+        width: w,
+        height: DEV_H,
+        opacity: isDragging ? 0.9 : 1,
+      }}
+    >
+      {/* Верхняя клемма (точка подключения к шине) */}
+      <div className="flex justify-center -mb-0.5">
+        <div className={`w-2.5 h-2.5 rounded-full border border-gray-400 ${isEq ? 'bg-gray-200' : 'bg-gray-300'}`} />
+      </div>
+
+      {/* Карточка */}
       <div
         className="relative h-full rounded-sm bg-white overflow-hidden"
         style={{
           border: '1.5px solid #d0d0d0',
-          boxShadow: isDragging ? '0 4px 20px rgba(0,0,0,0.15)' : '0 1px 2px rgba(0,0,0,0.04)',
+          boxShadow: isDragging ? '0 4px 20px rgba(0,0,0,0.15)' : '0 1px 2px rgba(0,0,0,0.06)',
+          height: DEV_H - 8,
         }}
       >
         {/* Цветная полоса слева */}
         <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${c.stripe}`} />
 
-        {/* Верхние клеммы */}
-        <div className="absolute top-0.5 left-2 right-1 flex" style={{ gap: MOD_W - 6 }}>
-          {Array.from({ length: item.modules }).map((_, i) => (
-            <div key={i} className="w-1.5 h-1.5 rounded-full bg-gray-300 border border-gray-400" />
-          ))}
-        </div>
-
-        {/* Тело устройства */}
-        <div className="absolute inset-x-0 top-3 bottom-3 flex flex-col items-center justify-center">
-          <span className={`text-[13px] font-bold leading-none ${c.text}`}>{item.rating}A</span>
-          {item.character && <span className="text-[10px] font-bold text-gray-400 leading-none">{item.character}</span>}
-          <span className={`text-[8px] font-extrabold leading-none mt-0.5 ${c.text} opacity-60 tracking-wider`}>{c.label}</span>
-          {(item.type === 'rcd' || item.type === 'diff_breaker') && (
-            <span className="text-[7px] text-gray-400 leading-none mt-0.5">{item.sublabel}</span>
+        {/* Тело */}
+        <div className="absolute inset-x-0 top-1.5 bottom-1.5 flex flex-col items-center justify-center">
+          {isEq ? (
+            <>
+              <span className="text-[9px] font-bold text-gray-500 text-center leading-tight px-1">
+                {item.label}
+              </span>
+              <span className="text-[7px] text-gray-400">{item.sublabel}</span>
+            </>
+          ) : (
+            <>
+              <span className={`text-[13px] font-bold leading-none ${c.text}`}>{item.rating}{item.rating > 0 ? 'A' : ''}</span>
+              {item.character && <span className="text-[10px] font-bold text-gray-400 leading-none">{item.character}</span>}
+              <span className={`text-[7.5px] font-extrabold leading-none mt-0.5 ${c.text} opacity-60 tracking-wider`}>{c.label}</span>
+              {(item.type === 'rcd' || item.type === 'diff_breaker') && (
+                <span className="text-[6.5px] text-gray-400 leading-none mt-0.5">{item.sublabel}</span>
+              )}
+            </>
           )}
         </div>
 
-        {/* Нижние клеммы */}
-        <div className="absolute bottom-0.5 left-2 right-1 flex" style={{ gap: MOD_W - 6 }}>
-          {Array.from({ length: item.modules }).map((_, i) => (
-            <div key={i} className="w-1.5 h-1.5 rounded-full bg-gray-300 border border-gray-400" />
-          ))}
-        </div>
+        {/* Реф */}
+        <span className="absolute top-0.5 right-1 text-[7px] font-mono text-gray-400 font-bold">{item.ref}</span>
 
-        {/* Реф (правый верхний угол) */}
-        <span className="absolute top-0 right-1 text-[7px] font-mono text-gray-400 font-bold">{item.ref}</span>
+        {/* Фаза */}
+        {item.phase && <span className="absolute top-0.5 left-2.5 text-[6px] font-mono text-gray-400">{item.phase}</span>}
+      </div>
 
-        {/* Фаза (левый верхний угол) */}
-        {item.phase && <span className="absolute top-0 left-2.5 text-[6px] font-mono text-gray-400">{item.phase}</span>}
-
-        {/* Подпись группы внизу */}
-        <span className="absolute -bottom-3.5 left-1/2 -translate-x-1/2 text-[7px] text-gray-400 whitespace-nowrap truncate" style={{ maxWidth: w - 6 }}>
-          {item.label.substring(0, 14)}
-        </span>
+      {/* Нижняя клемма (точка выхода) */}
+      <div className="flex justify-center -mt-0.5">
+        <div className={`w-2.5 h-2.5 rounded-full border border-gray-400 ${isEq ? 'bg-gray-200' : 'bg-gray-300'}`} />
       </div>
     </div>
   )
 }
 
-// ─── ВЕРХНЯЯ РАЗВОДКА (приход) ───
-// Шины L, N, PE сверху. Вводной кабель входит сверху по центру.
-// От шин — вертикальные отводы к верхним клеммам каждого устройства.
-function TopWiring({ items, supplyPhases, isFirstRow }: { items: PanelItem[]; supplyPhases: 1 | 3; isFirstRow: boolean }) {
-  const totalWidth = items.reduce((s, i) => s + i.modules * MOD_W, 0)
-  const is3 = supplyPhases === 3
-
-  // Позиции шин по Y
-  const L_Y = TOP_H - 10 // L гребёнка
-  const N_Y = TOP_H - 4  // N шина
-  const PE_Y = TOP_H - 0 // PE шина (самая верхняя, ближе к корпусу)
-
+// ─── ШИНА (цветная полоса) ───
+function BusBar({ color, label, height, width }: { color: string; label: string; height: number; width: number }) {
   return (
-    <div style={{ width: totalWidth, height: TOP_H }}>
-      <svg width={totalWidth} height={TOP_H} viewBox={`0 0 ${totalWidth} ${TOP_H}`}>
-        {/* ── Шины ── */}
-        {/* PE (самая верхняя) */}
-        <rect x={0} y={PE_Y - 2} width={totalWidth} height={3} rx={1.5} fill="#27ae60" opacity={0.9} />
-        {/* N */}
-        <rect x={0} y={N_Y - 2} width={totalWidth} height={3} rx={1.5} fill="#3498db" opacity={0.9} />
-        {/* L гребёнка */}
-        <rect x={0} y={L_Y - 2.5} width={totalWidth} height={4} rx={2} fill="#e74c3c" opacity={0.9} />
-        {is3 && (
-          <>
-            <rect x={0} y={16} width={totalWidth} height={2.5} rx={1} fill="#9b59b6" opacity={0.8} />
-            <rect x={0} y={11} width={totalWidth} height={2.5} rx={1} fill="#f39c12" opacity={0.8} />
-          </>
-        )}
-
-        {/* ── Метки шин ── */}
-        <text x={6} y={L_Y - 4} fontSize={7} fill="#c0392b" fontWeight="bold">L</text>
-        <text x={6} y={N_Y} fontSize={7} fill="#2980b9" fontWeight="bold">N</text>
-        <text x={6} y={PE_Y + 5} fontSize={7} fill="#27ae60" fontWeight="bold">PE</text>
-
-        {/* ── Вводной кабель (первый ряд) ── */}
-        {isFirstRow && (
-          <>
-            {/* Кабель сверху */}
-            <rect x={totalWidth / 2 - 6} y={0} width={12} height={8} rx={2} fill="#555" />
-            {/* L жила */}
-            <line x1={totalWidth / 2 - 3} y1={8} x2={totalWidth / 2 - 3} y2={L_Y} stroke="#e74c3c" strokeWidth={2.5} />
-            <circle cx={totalWidth / 2 - 3} cy={L_Y} r={2} fill="#e74c3c" />
-            {/* N жила */}
-            <line x1={totalWidth / 2 + 1} y1={8} x2={totalWidth / 2 + 1} y2={N_Y} stroke="#3498db" strokeWidth={2.5} />
-            <circle cx={totalWidth / 2 + 1} cy={N_Y} r={2} fill="#3498db" />
-            {/* PE жила */}
-            <line x1={totalWidth / 2 + 4} y1={8} x2={totalWidth / 2 + 4} y2={PE_Y} stroke="#27ae60" strokeWidth={2.5} />
-            <circle cx={totalWidth / 2 + 4} cy={PE_Y} r={2} fill="#27ae60" />
-            {/* Подпись "Ввод" */}
-            <text x={totalWidth / 2} y={-1} textAnchor="middle" fontSize={7} fill="#555" fontWeight="bold">~220В</text>
-          </>
-        )}
-
-        {/* ── Отводы от шин к устройствам ── */}
-        {items.map(item => {
-          const pos = buildPositions([item])[0]
-          const cx = pos.x + pos.w / 2
-
-          return (
-            <g key={`tw-${item.id}`}>
-              {/* L спуск к верхней клемме */}
-              <line x1={cx} y1={L_Y} x2={cx} y2={TOP_H - 3} stroke="#e74c3c" strokeWidth={1.5} />
-              <circle cx={cx} cy={L_Y} r={2.5} fill="#e74c3c" />
-
-              {/* N спуск (только для 2P/4P устройств и УЗО/диф) */}
-              {(item.poles >= 2 || item.type === 'rcd' || item.type === 'diff_breaker') && (
-                <>
-                  <line x1={cx} y1={N_Y} x2={cx} y2={TOP_H - 3} stroke="#3498db" strokeWidth={1.5} />
-                  <circle cx={cx} cy={N_Y} r={2} fill="#3498db" />
-                </>
-              )}
-
-              {/* PE спуск — всегда */}
-              <line x1={cx} y1={PE_Y} x2={cx} y2={TOP_H - 3} stroke="#27ae60" strokeWidth={1.2} />
-              <circle cx={cx} cy={PE_Y} r={1.5} fill="#27ae60" />
-            </g>
-          )
-        })}
-      </svg>
+    <div className="relative flex items-center" style={{ width, height }}>
+      <div className="absolute inset-x-0 rounded-full" style={{ height, background: color, opacity: 0.9 }} />
+      <span className="absolute left-0 text-[7px] font-bold text-white px-1" style={{ lineHeight: `${height}px` }}>
+        {label}
+      </span>
     </div>
   )
 }
 
-// ─── НИЖНЯЯ РАЗВОДКА (уход) ───
-// N шина и PE шина снизу. От каждого устройства — L/N/PE провода вниз к нагрузке.
-function BottomWiring({ items }: { items: PanelItem[] }) {
-  const totalWidth = items.reduce((s, i) => s + i.modules * MOD_W, 0)
-
-  // Позиции
-  const N_Y = 10  // N шина
-  const PE_Y = 22 // PE шина
-  const OUT_Y = 46 // линия выхода проводов
-
+// ─── ВВОДНОЙ КАБЕЛЬ (только первый ряд) ───
+function InputCable({ totalWidth }: { totalWidth: number }) {
+  const cx = totalWidth / 2
   return (
-    <div style={{ width: totalWidth, height: BOT_H }}>
-      <svg width={totalWidth} height={BOT_H} viewBox={`0 0 ${totalWidth} ${BOT_H}`}>
-        {/* ── Шины ── */}
-        {/* N шина */}
-        <rect x={0} y={N_Y - 2.5} width={totalWidth} height={4} rx={2} fill="#3498db" opacity={0.9} />
-        <text x={4} y={N_Y + 1.5} fontSize={7} fill="white" fontWeight="bold">N</text>
-        {/* PE шина */}
-        <rect x={0} y={PE_Y - 2.5} width={totalWidth} height={4} rx={2} fill="#27ae60" opacity={0.9} />
-        <text x={4} y={PE_Y + 1.5} fontSize={7} fill="white" fontWeight="bold">PE</text>
-
-        {/* ── Выходы к нагрузкам ── */}
-        {items.map(item => {
-          const pos = buildPositions([item])[0]
-          const cx = pos.x + pos.w / 2
-
-          // Для устройств с отдельными полюсами — показываем фазы раздельно
-          const loadName = item.label.length > 16 ? item.label.substring(0, 16) + '…' : item.label
-
-          // Пропускаем breakerless оборудование (реле, DIN-розетка)
-          if (item.type === 'panel_equipment') {
-            return (
-              <g key={`bw-${item.id}`}>
-                <text x={cx} y={PE_Y + 18} textAnchor="middle" fontSize={7} fill="#999" fontWeight="bold">
-                  {loadName}
-                </text>
-                <text x={cx} y={PE_Y + 28} textAnchor="middle" fontSize={6} fill="#aaa">
-                  без выхода
-                </text>
-              </g>
-            )
-          }
-
-          const isRcdOrDiff = item.type === 'rcd' || item.type === 'diff_breaker'
-          const is2P = item.poles >= 2
-
-          return (
-            <g key={`bw-${item.id}`}>
-              {/* N спуск от устройства к N шине */}
-              {(is2P || isRcdOrDiff) && (
-                <>
-                  <line x1={cx} y1={2} x2={cx} y2={N_Y} stroke="#3498db" strokeWidth={1.3} />
-                  <circle cx={cx} cy={N_Y} r={2} fill="#3498db" />
-                </>
-              )}
-              {/* N спуск от N шины к выходу (для 1P тоже, подключаются к N шине) */}
-              <line x1={cx} y1={N_Y + 2} x2={cx} y2={OUT_Y} stroke="#3498db" strokeWidth={1.5} />
-
-              {/* L спуск от устройства к выходу */}
-              <line x1={cx} y1={2} x2={cx} y2={OUT_Y} stroke="#e74c3c" strokeWidth={1.5} />
-              <circle cx={cx} cy={OUT_Y} r={2.5} fill="#e74c3c" />
-
-              {/* PE спуск */}
-              <line x1={cx} y1={PE_Y + 2} x2={cx} y2={OUT_Y} stroke="#27ae60" strokeWidth={1.2} />
-
-              {/* Пучок L+N+PE на выходе */}
-              <line x1={cx} y1={OUT_Y + 3} x2={cx} y2={BOT_H - 8} stroke="#555" strokeWidth={2} />
-              <rect x={cx - 5} y={BOT_H - 8} width={10} height={6} rx={1.5} fill="#666" />
-
-              {/* Метка нагрузки */}
-              <text x={cx} y={OUT_Y + 14} textAnchor="middle" fontSize={6.5} fill="#555" fontWeight="bold">
-                {loadName}
-              </text>
-              <text x={cx} y={OUT_Y + 22} textAnchor="middle" fontSize={5.5} fill="#999">
-                L·N·PE 3×2.5
-              </text>
-            </g>
-          )
-        })}
-      </svg>
+    <div className="relative" style={{ width: totalWidth, height: 24 }}>
+      {/* Кабель */}
+      <div className="absolute left-1/2 -translate-x-1/2 top-0" style={{ width: 14, height: 20 }}>
+        <div className="w-full h-3 bg-gray-600 rounded-t-sm" />
+        {/* Жилы */}
+        <div className="flex justify-between px-0.5">
+          <div className="w-1 h-9 bg-[#e74c3c] rounded-b" />
+          <div className="w-1 h-7 bg-[#3498db] rounded-b" />
+          <div className="w-1 h-5 bg-[#27ae60] rounded-b" />
+        </div>
+      </div>
+      <span className="absolute top-0 left-1/2 -translate-x-1/2 text-[8px] font-bold text-gray-600">~220В</span>
     </div>
   )
 }
 
-// ─── ГРУППИРУЮЩИЕ СКОБКИ (УЗО/диф → автоматы) ───
-function GroupBrackets({ items, positions }: { items: PanelItem[]; positions: { x: number; w: number; item: PanelItem }[] }) {
-  // Находим все RCD/diff, у которых есть защищаемые группы
-  const parents = positions.filter(p => p.item.protectedGroupIds.length > 0)
-  if (parents.length === 0) return null
-
-  const totalWidth = items.reduce((s, i) => s + i.modules * MOD_W, 0)
-
-  const groups: { parent: typeof parents[0]; children: typeof positions }[] = []
-
-  for (const parent of parents) {
-    // Находим дочерние автоматы в том же ряду, чьи id есть в protectedGroupIds родителя
-    const children = positions.filter(p =>
-      p.item.id !== parent.item.id &&
-      p.item.protectedGroupIds.length === 0 && // только простые автоматы
-      parent.item.protectedGroupIds.some(gname => p.item.label.includes(gname) || gname.includes(p.item.label))
-    )
-    if (children.length > 0) {
-      groups.push({ parent, children })
-    }
+// ─── ПОЛОСА ПОДКЛЮЧЕНИЙ К ШИНАМ ───
+function BusConnectors({ items, totalWidth }: { items: PanelItem[]; totalWidth: number }) {
+  // Вычисляем позиции центров устройств
+  let curX = 0
+  const centers: { cx: number; needN: boolean; needPE: boolean }[] = []
+  for (const it of items) {
+    const cx = curX + (it.modules * MOD_W) / 2
+    const isEq = it.type === 'panel_equipment'
+    const needN = !isEq && (it.poles >= 2 || it.type === 'rcd' || it.type === 'diff_breaker')
+    centers.push({ cx, needN, needPE: !isEq })
+    curX += it.modules * MOD_W
   }
-
-  if (groups.length === 0) return null
-
   return (
-    <div className="relative" style={{ width: totalWidth, height: 14, marginBottom: -2 }}>
-      <svg width={totalWidth} height={14} viewBox={`0 0 ${totalWidth} 14`}>
-        {groups.map((g, gi) => {
-          const parentColor = g.parent.item.type === 'rcd' ? '#1976d2' : '#00838f'
-          const startX = g.parent.x
-          const endX = g.parent.x + g.parent.w
-          const childStartX = Math.min(...g.children.map(c => c.x))
-          const childEndX = Math.max(...g.children.map(c => c.x + c.w))
-          const bracketLeft = Math.min(startX, childStartX)
-          const bracketRight = Math.max(endX, childEndX)
-          const bracketW = bracketRight - bracketLeft
-
-          return (
-            <g key={`grp-${gi}`}>
-              {/* Горизонтальная линия под родителем и детьми */}
-              <rect x={bracketLeft} y={8} width={bracketW} height={2} rx={1} fill={parentColor} opacity={0.35} />
-              {/* Вертикальные засечки к родителю */}
-              <line x1={startX + g.parent.w / 2} y1={4} x2={startX + g.parent.w / 2} y2={9} stroke={parentColor} strokeWidth={1} opacity={0.35} />
-              {/* Вертикальные засечки к детям */}
-              {g.children.map((ch, ci) => (
-                <line key={`ch-${ci}`} x1={ch.x + ch.w / 2} y1={4} x2={ch.x + ch.w / 2} y2={9} stroke={parentColor} strokeWidth={0.7} opacity={0.25} />
-              ))}
-              {/* Подпись снизу */}
-              <text x={bracketLeft + bracketW / 2} y={13} textAnchor="middle" fontSize={6} fill={parentColor} opacity={0.7}>
-                {g.parent.item.ref} → {g.parent.item.label.substring(0, 20)}
-              </text>
-            </g>
-          )
-        })}
-      </svg>
+    <div className="relative" style={{ width: totalWidth, height: 10 }}>
+      {centers.map((c, i) => (
+        <React.Fragment key={i}>
+          {/* L спуск (красный) */}
+          <div className="absolute top-0" style={{ left: c.cx - 0.5, width: 1, height: 10, background: '#e74c3c' }} />
+          {c.needN && (
+            <div className="absolute top-0" style={{ left: c.cx + 2, width: 1, height: 10, background: '#3498db' }} />
+          )}
+          {c.needPE && (
+            <div className="absolute top-0" style={{ left: c.cx + 4, width: 1, height: 10, background: '#27ae60' }} />
+          )}
+        </React.Fragment>
+      ))}
     </div>
   )
 }
@@ -353,74 +177,193 @@ function GroupBrackets({ items, positions }: { items: PanelItem[]; positions: { 
 // ─── DIN-РЕЙКА ───
 function DinRail({ width }: { width: number }) {
   return (
-    <div style={{ width, height: DIN_H + 4 }}>
-      <svg width={width} height={DIN_H + 4} viewBox={`0 0 ${width} ${DIN_H + 4}`}>
-        <rect x={0} y={0} width={width} height={DIN_H + 4} rx={1} fill="#d0d0d0" />
-        <rect x={0} y={0} width={width} height={2.5} fill="#bbb" rx={1} />
-        <rect x={0} y={DIN_H + 1.5} width={width} height={2.5} fill="#bbb" rx={1} />
-        <line x1={0} y1={2} x2={width} y2={2} stroke="rgba(255,255,255,0.4)" strokeWidth={0.5} />
-      </svg>
+    <div className="relative" style={{ width, height: 7 }}>
+      <div
+        className="absolute inset-x-0 rounded-sm"
+        style={{ height: 7, background: 'linear-gradient(180deg, #b0b0b0 0%, #d5d5d5 30%, #e8e8e8 70%, #b8b8b8 100%)' }}
+      />
+      <div className="absolute top-0 inset-x-0 h-1.5 bg-gray-400 rounded-t-sm" />
+      <div className="absolute bottom-0 inset-x-0 h-1.5 bg-gray-400 rounded-b-sm" />
+    </div>
+  )
+}
+
+// ─── ВЫХОДЫ К НАГРУЗКАМ ───
+function OutputStrip({ items, totalWidth }: { items: PanelItem[]; totalWidth: number }) {
+  let curX = 0
+  const cells: { item: PanelItem; cx: number }[] = []
+  for (const it of items) {
+    cells.push({ item: it, cx: curX + (it.modules * MOD_W) / 2 })
+    curX += it.modules * MOD_W
+  }
+  return (
+    <div className="relative" style={{ width: totalWidth, height: 30 }}>
+      {/* N шина */}
+      <div className="absolute inset-x-0 top-0 rounded-full" style={{ height: 3, background: '#3498db', opacity: 0.9 }} />
+      {/* PE шина */}
+      <div className="absolute inset-x-0 rounded-full" style={{ top: 7, height: 3, background: '#27ae60', opacity: 0.9 }} />
+
+      {cells.map(({ item, cx }, i) => {
+        const isEq = item.type === 'panel_equipment'
+        const loadName = item.label.length > 14 ? item.label.substring(0, 14) + '…' : item.label
+
+        if (isEq) {
+          return (
+            <div key={i} className="absolute flex flex-col items-center" style={{ left: cx - 30, width: 60, top: 12 }}>
+              <span className="text-[6px] text-gray-400">{loadName}</span>
+              <span className="text-[5px] text-gray-300">оборудование</span>
+            </div>
+          )
+        }
+
+        return (
+          <div key={i} className="absolute flex flex-col items-center" style={{ left: cx - 40, width: 80, top: 2 }}>
+            {/* L/N/PE жилы от клемм к шинам и вниз */}
+            <div style={{ width: 0, borderLeft: '1.5px solid #e74c3c', height: 10 }} />
+            <div className="flex gap-0.5 mt-0.5">
+              <span className="text-[5px] font-bold text-[#e74c3c]">L</span>
+              <span className="text-[5px] font-bold text-[#3498db]">N</span>
+              <span className="text-[5px] font-bold text-[#27ae60]">PE</span>
+            </div>
+            {/* Метка нагрузки */}
+            <div className="text-[7px] font-semibold text-gray-600 mt-0.5 text-center leading-tight">{loadName}</div>
+            <div className="text-[5px] text-gray-400">3×2.5</div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ─── ГРУППИРУЮЩИЕ СКОБКИ (УЗО/диф → автоматы) ───
+function GroupBrackets({ items }: { items: PanelItem[] }) {
+  const parents = items.filter(it => it.protectedGroupIds.length > 0)
+  if (parents.length === 0) return null
+
+  const totalWidth = items.reduce((s, i) => s + i.modules * MOD_W, 0)
+
+  // Позиции
+  let curX = 0
+  const posMap = new Map<string, { x: number; w: number }>()
+  for (const it of items) {
+    posMap.set(it.id, { x: curX, w: it.modules * MOD_W })
+    curX += it.modules * MOD_W
+  }
+
+  const brackets: { left: number; right: number; color: string; ref: string }[] = []
+
+  for (const parent of parents) {
+    const pp = posMap.get(parent.id)!
+    // Ищем детей в том же ряду
+    const children = items.filter(c =>
+      c.id !== parent.id &&
+      c.protectedGroupIds.length === 0 &&
+      parent.protectedGroupIds.some(gname => c.label.includes(gname) || gname.includes(c.label))
+    )
+    if (children.length === 0) continue
+
+    const childLefts = children.map(c => posMap.get(c.id)!.x)
+    const childRights = children.map(c => posMap.get(c.id)!.x + posMap.get(c.id)!.w)
+    const left = Math.min(pp.x, ...childLefts)
+    const right = Math.max(pp.x + pp.w, ...childRights)
+    const color = parent.type === 'rcd' ? '#1976d2' : '#00838f'
+
+    brackets.push({ left, right, color, ref: parent.ref })
+  }
+
+  if (brackets.length === 0) return null
+
+  return (
+    <div className="relative" style={{ width: totalWidth, height: 8, marginBottom: 2 }}>
+      {brackets.map((b, i) => (
+        <div
+          key={i}
+          className="absolute rounded-sm"
+          style={{
+            left: b.left,
+            width: b.right - b.left,
+            top: 6,
+            height: 2,
+            background: b.color,
+            opacity: 0.35,
+          }}
+        >
+          <span
+            className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap text-[6px]"
+            style={{ top: 3, color: b.color, opacity: 0.6 }}
+          >
+            {b.ref}
+          </span>
+        </div>
+      ))}
     </div>
   )
 }
 
 // ─── РЯД УСТРОЙСТВ ───
-function DeviceRow({
+function PanelRow({
   row,
   rowIndex,
+  isFirst,
   supplyPhases,
 }: {
   row: PanelItem[]
   rowIndex: number
+  isFirst: boolean
   supplyPhases: 1 | 3
 }) {
-  const rowWidth = row.reduce((s, i) => s + i.modules * MOD_W, 0)
-  const isFirstRow = rowIndex === 0
+  const totalWidth = row.reduce((s, i) => s + i.modules * MOD_W, 0)
 
   return (
-    <div className="flex flex-col items-center" style={{ gap: 0 }}>
-      <span className="text-[10px] text-gray-400 font-mono self-start ml-1">Ряд {rowIndex + 1}</span>
+    <div className="flex flex-col items-center" style={{ gap: 2 }}>
+      {/* Метка ряда */}
+      <span className="text-[9px] text-gray-400 font-mono self-start ml-1">Ряд {rowIndex + 1}</span>
 
-      {/* Верхняя разводка */}
-      <TopWiring items={row} supplyPhases={supplyPhases} isFirstRow={isFirstRow} />
+      {/* Вводной кабель (первый ряд) */}
+      {isFirst && <InputCable totalWidth={totalWidth} />}
 
-      {/* DIN-рейка + карточки устройств */}
-      <div className="relative flex flex-col items-center" style={{ marginTop: -2 }}>
-        <div className="relative">
-          <DinRail width={rowWidth} />
-          <div style={{ marginTop: -(DIN_H + DEV_H + 7) }}>
-            <div className="flex" style={{ paddingBottom: 6 }}>
-              {row.map(item => (
-                <DeviceCard key={item.id} item={item} />
-              ))}
-            </div>
-          </div>
-        </div>
-        {/* Логические связи УЗО/диф → автоматы */}
-        <GroupBrackets items={row} positions={buildPositions(row)} />
+      {/* Шины (PE сверху, N, L снизу — ближе к устройствам) */}
+      <div className="flex flex-col" style={{ gap: 1.5 }}>
+        <BusBar color="#27ae60" label="PE" height={3} width={totalWidth} />
+        <BusBar color="#3498db" label="N"  height={3} width={totalWidth} />
+        <BusBar color="#e74c3c" label="L"  height={4} width={totalWidth} />
       </div>
 
-      {/* Нижняя разводка */}
-      <BottomWiring items={row} />
+      {/* Спуски от шин к устройствам */}
+      <BusConnectors items={row} totalWidth={totalWidth} />
+
+      {/* Устройства */}
+      <div className="flex" style={{ paddingBottom: 4 }}>
+        {row.map(item => (
+          <DeviceCard key={item.id} item={item} />
+        ))}
+      </div>
+
+      {/* DIN-рейка */}
+      <DinRail width={totalWidth} />
+
+      {/* Логические связи */}
+      <GroupBrackets items={row} />
+
+      {/* Выходы */}
+      <OutputStrip items={row} totalWidth={totalWidth} />
     </div>
   )
 }
 
-// ─── КОРПУС ЩИТА ───
+// ─── КОРПУС ───
 function PanelEnclosure({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative bg-gray-100 rounded-lg p-4" style={{ border: '3px solid #888', minWidth: 380 }}>
+    <div className="relative bg-gray-100 rounded-lg p-4" style={{ border: '3px solid #999', minWidth: 380 }}>
       {/* Петли */}
-      <div className="absolute left-1 top-4 w-1.5 h-3.5 rounded-full bg-gray-400 border border-gray-500" />
-      <div className="absolute left-1 bottom-4 w-1.5 h-3.5 rounded-full bg-gray-400 border border-gray-500" />
-      {/* Угловые винты */}
-      <div className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-gray-400 border border-gray-500" />
-      <div className="absolute bottom-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-gray-400 border border-gray-500" />
-      <div className="absolute top-1.5 left-4 w-1.5 h-1.5 rounded-full bg-gray-400 border border-gray-500" />
-      <div className="absolute bottom-1.5 left-4 w-1.5 h-1.5 rounded-full bg-gray-400 border border-gray-500" />
+      <div className="absolute -left-0.5 top-4 w-2 h-4 rounded-full bg-gray-400 border border-gray-500" />
+      <div className="absolute -left-0.5 bottom-4 w-2 h-4 rounded-full bg-gray-400 border border-gray-500" />
+      {/* Винты */}
+      {['top-1.5 right-1.5', 'bottom-1.5 right-1.5', 'top-1.5 left-4', 'bottom-1.5 left-4'].map((pos, i) => (
+        <div key={i} className={`absolute ${pos} w-1.5 h-1.5 rounded-full bg-gray-400 border border-gray-500`} />
+      ))}
 
-      {/* Монтажная панель */}
-      <div className="bg-gray-50 rounded-sm p-3 border border-gray-200">
+      <div className="bg-gray-50 rounded-sm p-4 border border-gray-200">
         {children}
       </div>
 
@@ -466,21 +409,13 @@ export function RealisticPanel({
       character: mb.characteristic, poles: mb.poles, protectedGroupIds: [],
     })
 
-    // Оборудование щитка — сразу после вводного (реле напряжения, DIN-розетка и т.п.)
     if (result.panelEquipment) {
       for (const eq of result.panelEquipment) {
         newItems.push({
-          id: `eq_${eq.id}`,
-          type: 'panel_equipment',
-          ref: '—',
-          label: eq.name,
-          sublabel: `${eq.modules} модуля`,
-          modules: eq.modules,
-          phase: undefined,
-          rating: 0,
-          character: '',
-          poles: 1,
-          protectedGroupIds: [],
+          id: `eq_${eq.id}`, type: 'panel_equipment', ref: '—',
+          label: eq.name, sublabel: `${eq.modules} мод.`,
+          modules: eq.modules, phase: undefined, rating: 0,
+          character: '', poles: 1, protectedGroupIds: [],
         })
       }
     }
@@ -489,8 +424,7 @@ export function RealisticPanel({
       if (d.id === 'main' || d.id === 'load_break') continue
       const isRcd = d.type === 'rcd' || d.type === 'diff_breaker'
       newItems.push({
-        id: d.id,
-        type: d.type,
+        id: d.id, type: d.type,
         ref: isRcd
           ? (d as RCD).type === 'diff_breaker' ? 'AD1' : 'F1'
           : `QF${qfCounter++}`,
@@ -556,16 +490,16 @@ export function RealisticPanel({
         </div>
       </div>
 
-      {/* Корпус */}
       <PanelEnclosure>
         <DndContext onDragEnd={handleDragEnd}>
           <SortableContext items={items.map(i => i.id)} strategy={rectSortingStrategy}>
-            <div className="flex flex-col" style={{ gap: 36 }}>
+            <div className="flex flex-col" style={{ gap: 28 }}>
               {rows.map((row, ri) => (
-                <DeviceRow
+                <PanelRow
                   key={ri}
                   row={row}
                   rowIndex={ri}
+                  isFirst={ri === 0}
                   supplyPhases={result.supplyPhases}
                 />
               ))}
