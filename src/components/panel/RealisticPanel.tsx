@@ -10,8 +10,8 @@ import type { CalculationResult, CircuitBreaker, RCD, PhaseId } from '@/types/el
 const MOD_W = 44   // ширина 1 модуля в px
 const DEV_H = 54   // высота карточки устройства
 const DIN_H = 6    // высота DIN-рейки
-const TOP_H = 28   // высота верхней разводки
-const BOT_H = 52   // высота нижней разводки (выходы)
+const TOP_H = 48   // высота верхней разводки (ввод + шины)
+const BOT_H = 72   // высота нижней разводки (шины + выходы к нагрузкам)
 
 // ─── ТИПЫ ───
 interface PanelItem {
@@ -44,31 +44,6 @@ function devColor(type: string): { stripe: string; bg: string; text: string; lab
     default:
       return { stripe: 'bg-gray-400', bg: 'bg-gray-50', text: 'text-gray-700', label: 'АВ' }
   }
-}
-
-// ─── ЦВЕТА ПРОВОДОВ ───
-const WIRE: Record<string, string> = { L: '#e74c3c', L1: '#e74c3c', L2: '#f39c12', L3: '#9b59b6', N: '#3498db', PE: '#27ae60' }
-
-function getPole(item: PanelItem, modIdx: number): { label: string; color: string } | null {
-  if (item.type === 'rcd' || item.type === 'diff_breaker') {
-    if (item.poles >= 2 && modIdx === item.poles - 1) return { label: 'N', color: WIRE.N }
-  }
-  if (item.poles === 1) return { label: 'L', color: WIRE.L }
-  if (item.poles === 2) {
-    return modIdx === 0 ? { label: 'L', color: WIRE.L } : { label: 'N', color: WIRE.N }
-  }
-  if (item.poles === 3) {
-    const labels = ['L1', 'L2', 'L3']
-    return { label: labels[modIdx], color: WIRE[labels[modIdx]] }
-  }
-  if (item.poles === 4) {
-    if (modIdx < 3) {
-      const labels = ['L1', 'L2', 'L3']
-      return { label: labels[modIdx], color: WIRE[labels[modIdx]] }
-    }
-    return { label: 'N', color: WIRE.N }
-  }
-  return null
 }
 
 // Сборка позиций устройств в ряду
@@ -150,126 +125,166 @@ function DeviceCard({ item }: { item: PanelItem }) {
 }
 
 // ─── ВЕРХНЯЯ РАЗВОДКА (приход) ───
-function TopWiring({ items, rowIndex, supplyPhases }: { items: PanelItem[]; rowIndex: number; supplyPhases: 1 | 3 }) {
+// Шины L, N, PE сверху. Вводной кабель входит сверху по центру.
+// От шин — вертикальные отводы к верхним клеммам каждого устройства.
+function TopWiring({ items, supplyPhases, isFirstRow }: { items: PanelItem[]; supplyPhases: 1 | 3; isFirstRow: boolean }) {
   const totalWidth = items.reduce((s, i) => s + i.modules * MOD_W, 0)
-  const halfW = totalWidth / 2
   const is3 = supplyPhases === 3
 
-  // Позиции шин
-  const busY = { PE: 6, N: is3 ? 10 : 14, L3: 14.5, L2: 17.5, L1: 20.5 }
-
-  // Строим проводники от шин к клеммам
-  const drops: { key: string; x: number; y1: number; y2: number; color: string; label: string }[] = []
-  let curX = 0
-  for (const it of items) {
-    for (let mi = 0; mi < it.modules; mi++) {
-      const pole = getPole(it, mi)
-      if (!pole) continue
-      const cx = curX + mi * MOD_W + MOD_W / 2
-      const key = pole.label as keyof typeof busY
-      const yb = busY[key] ?? busY.L1
-      drops.push({ key: `tw-${it.id}-${mi}`, x: cx, y1: TOP_H, y2: yb + 1.5, color: pole.color, label: pole.label })
-    }
-    curX += it.modules * MOD_W
-  }
+  // Позиции шин по Y
+  const L_Y = TOP_H - 10 // L гребёнка
+  const N_Y = TOP_H - 4  // N шина
+  const PE_Y = TOP_H - 0 // PE шина (самая верхняя, ближе к корпусу)
 
   return (
     <div style={{ width: totalWidth, height: TOP_H }}>
       <svg width={totalWidth} height={TOP_H} viewBox={`0 0 ${totalWidth} ${TOP_H}`}>
-        {/* Вводной кабель (только первый ряд) */}
-        {rowIndex === 0 && (
-          <>
-            <rect x={halfW - 3} y={0} width={6} height={12} rx={2} fill="#333" />
-            <line x1={halfW - 4} y1={12} x2={halfW - 4} y2={busY.L1 - 1} stroke="#e74c3c" strokeWidth={2} strokeLinecap="round" />
-            <line x1={halfW + 1} y1={12} x2={halfW + 1} y2={busY.N - 1} stroke="#3498db" strokeWidth={2} strokeLinecap="round" />
-            <line x1={halfW + 5} y1={12} x2={halfW + 5} y2={busY.PE - 1} stroke="#27ae60" strokeWidth={2} strokeLinecap="round" />
-          </>
-        )}
-
-        {/* Гребёнки */}
-        <rect x={0} y={busY.L1} width={totalWidth} height={2.5} rx={1} fill="#e74c3c" opacity={0.85} />
+        {/* ── Шины ── */}
+        {/* PE (самая верхняя) */}
+        <rect x={0} y={PE_Y - 2} width={totalWidth} height={3} rx={1.5} fill="#27ae60" opacity={0.9} />
+        {/* N */}
+        <rect x={0} y={N_Y - 2} width={totalWidth} height={3} rx={1.5} fill="#3498db" opacity={0.9} />
+        {/* L гребёнка */}
+        <rect x={0} y={L_Y - 2.5} width={totalWidth} height={4} rx={2} fill="#e74c3c" opacity={0.9} />
         {is3 && (
           <>
-            <rect x={0} y={busY.L3} width={totalWidth} height={2} rx={1} fill="#9b59b6" opacity={0.85} />
-            <rect x={0} y={busY.L2} width={totalWidth} height={2} rx={1} fill="#f39c12" opacity={0.85} />
+            <rect x={0} y={16} width={totalWidth} height={2.5} rx={1} fill="#9b59b6" opacity={0.8} />
+            <rect x={0} y={11} width={totalWidth} height={2.5} rx={1} fill="#f39c12" opacity={0.8} />
           </>
         )}
-        <rect x={0} y={busY.N} width={totalWidth} height={2.5} rx={1} fill="#3498db" opacity={0.85} />
-        <rect x={0} y={busY.PE} width={totalWidth} height={2.5} rx={1} fill="#27ae60" opacity={0.85} />
 
-        {/* Проводники от шин к устройствам */}
-        {drops.map(d => (
-          <line key={d.key} x1={d.x} y1={d.y1} x2={d.x} y2={d.y2} stroke={d.color} strokeWidth={1.2} strokeLinecap="round" />
-        ))}
+        {/* ── Метки шин ── */}
+        <text x={6} y={L_Y - 4} fontSize={7} fill="#c0392b" fontWeight="bold">L</text>
+        <text x={6} y={N_Y} fontSize={7} fill="#2980b9" fontWeight="bold">N</text>
+        <text x={6} y={PE_Y + 5} fontSize={7} fill="#27ae60" fontWeight="bold">PE</text>
+
+        {/* ── Вводной кабель (первый ряд) ── */}
+        {isFirstRow && (
+          <>
+            {/* Кабель сверху */}
+            <rect x={totalWidth / 2 - 6} y={0} width={12} height={8} rx={2} fill="#555" />
+            {/* L жила */}
+            <line x1={totalWidth / 2 - 3} y1={8} x2={totalWidth / 2 - 3} y2={L_Y} stroke="#e74c3c" strokeWidth={2.5} />
+            <circle cx={totalWidth / 2 - 3} cy={L_Y} r={2} fill="#e74c3c" />
+            {/* N жила */}
+            <line x1={totalWidth / 2 + 1} y1={8} x2={totalWidth / 2 + 1} y2={N_Y} stroke="#3498db" strokeWidth={2.5} />
+            <circle cx={totalWidth / 2 + 1} cy={N_Y} r={2} fill="#3498db" />
+            {/* PE жила */}
+            <line x1={totalWidth / 2 + 4} y1={8} x2={totalWidth / 2 + 4} y2={PE_Y} stroke="#27ae60" strokeWidth={2.5} />
+            <circle cx={totalWidth / 2 + 4} cy={PE_Y} r={2} fill="#27ae60" />
+            {/* Подпись "Ввод" */}
+            <text x={totalWidth / 2} y={-1} textAnchor="middle" fontSize={7} fill="#555" fontWeight="bold">~220В</text>
+          </>
+        )}
+
+        {/* ── Отводы от шин к устройствам ── */}
+        {items.map(item => {
+          const pos = buildPositions([item])[0]
+          const cx = pos.x + pos.w / 2
+
+          return (
+            <g key={`tw-${item.id}`}>
+              {/* L спуск к верхней клемме */}
+              <line x1={cx} y1={L_Y} x2={cx} y2={TOP_H - 3} stroke="#e74c3c" strokeWidth={1.5} />
+              <circle cx={cx} cy={L_Y} r={2.5} fill="#e74c3c" />
+
+              {/* N спуск (только для 2P/4P устройств и УЗО/диф) */}
+              {(item.poles >= 2 || item.type === 'rcd' || item.type === 'diff_breaker') && (
+                <>
+                  <line x1={cx} y1={N_Y} x2={cx} y2={TOP_H - 3} stroke="#3498db" strokeWidth={1.5} />
+                  <circle cx={cx} cy={N_Y} r={2} fill="#3498db" />
+                </>
+              )}
+
+              {/* PE спуск — всегда */}
+              <line x1={cx} y1={PE_Y} x2={cx} y2={TOP_H - 3} stroke="#27ae60" strokeWidth={1.2} />
+              <circle cx={cx} cy={PE_Y} r={1.5} fill="#27ae60" />
+            </g>
+          )
+        })}
       </svg>
     </div>
   )
 }
 
 // ─── НИЖНЯЯ РАЗВОДКА (уход) ───
+// N шина и PE шина снизу. От каждого устройства — L/N/PE провода вниз к нагрузке.
 function BottomWiring({ items }: { items: PanelItem[] }) {
   const totalWidth = items.reduce((s, i) => s + i.modules * MOD_W, 0)
-  const positions = buildPositions(items)
 
-  // Шины
-  const nY = 24
-  const peY = 36
+  // Позиции
+  const N_Y = 10  // N шина
+  const PE_Y = 22 // PE шина
+  const OUT_Y = 46 // линия выхода проводов
 
   return (
     <div style={{ width: totalWidth, height: BOT_H }}>
       <svg width={totalWidth} height={BOT_H} viewBox={`0 0 ${totalWidth} ${BOT_H}`}>
+        {/* ── Шины ── */}
         {/* N шина */}
-        <rect x={0} y={nY} width={totalWidth} height={4} rx={2} fill="#3498db" opacity={0.75} />
-        <text x={totalWidth - 3} y={nY + 3} textAnchor="end" fontSize={5} fill="white" fontWeight="bold">N</text>
+        <rect x={0} y={N_Y - 2.5} width={totalWidth} height={4} rx={2} fill="#3498db" opacity={0.9} />
+        <text x={4} y={N_Y + 1.5} fontSize={7} fill="white" fontWeight="bold">N</text>
         {/* PE шина */}
-        <rect x={0} y={peY} width={totalWidth} height={4} rx={2} fill="#27ae60" opacity={0.75} />
-        <text x={totalWidth - 3} y={peY + 3} textAnchor="end" fontSize={5} fill="white" fontWeight="bold">PE</text>
+        <rect x={0} y={PE_Y - 2.5} width={totalWidth} height={4} rx={2} fill="#27ae60" opacity={0.9} />
+        <text x={4} y={PE_Y + 1.5} fontSize={7} fill="white" fontWeight="bold">PE</text>
 
-        {/* Индивидуальные выходы */}
-        {positions.map(dp => {
-          const cx = dp.x + dp.w / 2
-          const items: React.ReactNode[] = []
+        {/* ── Выходы к нагрузкам ── */}
+        {items.map(item => {
+          const pos = buildPositions([item])[0]
+          const cx = pos.x + pos.w / 2
 
-          // Фазные провода
-          for (let mi = 0; mi < dp.item.modules; mi++) {
-            const pole = getPole(dp.item, mi)
-            if (!pole || pole.label === 'N') continue
-            const px = dp.x + mi * MOD_W + MOD_W / 2
-            items.push(
-              <g key={`bw-l-${dp.item.id}-${mi}`}>
-                <line x1={px} y1={1} x2={px} y2={BOT_H - 12} stroke={pole.color} strokeWidth={1.2} strokeLinecap="round" />
-                <text x={px} y={BOT_H - 2} textAnchor="middle" fontSize={5} fill={pole.color} fontWeight="bold">{pole.label}</text>
+          // Для устройств с отдельными полюсами — показываем фазы раздельно
+          const loadName = item.label.length > 16 ? item.label.substring(0, 16) + '…' : item.label
+
+          // Пропускаем breakerless оборудование (реле, DIN-розетка)
+          if (item.type === 'panel_equipment') {
+            return (
+              <g key={`bw-${item.id}`}>
+                <text x={cx} y={PE_Y + 18} textAnchor="middle" fontSize={7} fill="#999" fontWeight="bold">
+                  {loadName}
+                </text>
+                <text x={cx} y={PE_Y + 28} textAnchor="middle" fontSize={6} fill="#aaa">
+                  без выхода
+                </text>
               </g>
             )
           }
 
-          // N
-          const nFrom = dp.item.poles >= 2 ? 1 : nY + 2
-          items.push(
-            <g key={`bw-n-${dp.item.id}`}>
-              <line x1={cx} y1={nFrom} x2={cx} y2={BOT_H - 12} stroke="#3498db" strokeWidth={1.2} strokeLinecap="round" />
-              {dp.item.poles < 2 && <circle cx={cx} cy={nY + 2} r={1.5} fill="#3498db" />}
-              <text x={cx} y={BOT_H - 2} textAnchor="middle" fontSize={5} fill="#3498db" fontWeight="bold">N</text>
+          const isRcdOrDiff = item.type === 'rcd' || item.type === 'diff_breaker'
+          const is2P = item.poles >= 2
+
+          return (
+            <g key={`bw-${item.id}`}>
+              {/* N спуск от устройства к N шине */}
+              {(is2P || isRcdOrDiff) && (
+                <>
+                  <line x1={cx} y1={2} x2={cx} y2={N_Y} stroke="#3498db" strokeWidth={1.3} />
+                  <circle cx={cx} cy={N_Y} r={2} fill="#3498db" />
+                </>
+              )}
+              {/* N спуск от N шины к выходу (для 1P тоже, подключаются к N шине) */}
+              <line x1={cx} y1={N_Y + 2} x2={cx} y2={OUT_Y} stroke="#3498db" strokeWidth={1.5} />
+
+              {/* L спуск от устройства к выходу */}
+              <line x1={cx} y1={2} x2={cx} y2={OUT_Y} stroke="#e74c3c" strokeWidth={1.5} />
+              <circle cx={cx} cy={OUT_Y} r={2.5} fill="#e74c3c" />
+
+              {/* PE спуск */}
+              <line x1={cx} y1={PE_Y + 2} x2={cx} y2={OUT_Y} stroke="#27ae60" strokeWidth={1.2} />
+
+              {/* Пучок L+N+PE на выходе */}
+              <line x1={cx} y1={OUT_Y + 3} x2={cx} y2={BOT_H - 8} stroke="#555" strokeWidth={2} />
+              <rect x={cx - 5} y={BOT_H - 8} width={10} height={6} rx={1.5} fill="#666" />
+
+              {/* Метка нагрузки */}
+              <text x={cx} y={OUT_Y + 14} textAnchor="middle" fontSize={6.5} fill="#555" fontWeight="bold">
+                {loadName}
+              </text>
+              <text x={cx} y={OUT_Y + 22} textAnchor="middle" fontSize={5.5} fill="#999">
+                L·N·PE 3×2.5
+              </text>
             </g>
           )
-
-          // PE
-          items.push(
-            <g key={`bw-pe-${dp.item.id}`}>
-              <line x1={cx} y1={peY + 2} x2={cx} y2={BOT_H - 12} stroke="#27ae60" strokeWidth={1.2} strokeLinecap="round" />
-              <circle cx={cx} cy={peY + 2} r={1.5} fill="#27ae60" />
-              <text x={cx} y={BOT_H - 2} textAnchor="middle" fontSize={5} fill="#27ae60" fontWeight="bold">PE</text>
-            </g>
-          )
-
-          // Метка нагрузки
-          items.push(
-            <text key={`bwl-${dp.item.id}`} x={cx} y={BOT_H - 20} textAnchor="middle" fontSize={5.5} fill="#999">
-              {dp.item.label.substring(0, 14)}
-            </text>
-          )
-
-          return <g key={`bw-${dp.item.id}`}>{items}</g>
         })}
       </svg>
     </div>
@@ -360,13 +375,14 @@ function DeviceRow({
   supplyPhases: 1 | 3
 }) {
   const rowWidth = row.reduce((s, i) => s + i.modules * MOD_W, 0)
+  const isFirstRow = rowIndex === 0
 
   return (
     <div className="flex flex-col items-center" style={{ gap: 0 }}>
       <span className="text-[10px] text-gray-400 font-mono self-start ml-1">Ряд {rowIndex + 1}</span>
 
       {/* Верхняя разводка */}
-      <TopWiring items={row} rowIndex={rowIndex} supplyPhases={supplyPhases} />
+      <TopWiring items={row} supplyPhases={supplyPhases} isFirstRow={isFirstRow} />
 
       {/* DIN-рейка + карточки устройств */}
       <div className="relative flex flex-col items-center" style={{ marginTop: -2 }}>
