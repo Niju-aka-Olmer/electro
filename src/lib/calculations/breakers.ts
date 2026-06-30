@@ -122,12 +122,18 @@ export function calcRoomBreakers(room: RoomConfig): CircuitBreaker[] {
  * Специальные нагрузки с фиксированными номиналами
  */
 export const STANDARD_LOADS: Record<string, { powerW: number; ratingA: BreakerRating; poles: 1 | 2; note: string }> = {
-  cooktop:      { powerW: 7000, ratingA: 32, poles: 2, note: 'Варочная поверхность' },
-  oven:         { powerW: 3500, ratingA: 16, poles: 1, note: 'Духовой шкаф' },
-  washer:       { powerW: 2500, ratingA: 16, poles: 1, note: 'Стиральная машина' },
-  dishwasher:   { powerW: 2200, ratingA: 16, poles: 1, note: 'Посудомоечная машина' },
-  ac:           { powerW: 2500, ratingA: 16, poles: 1, note: 'Кондиционер' },
-  boiler:       { powerW: 2000, ratingA: 16, poles: 1, note: 'Водонагреватель' },
+  cooktop:       { powerW: 7000, ratingA: 32, poles: 2, note: 'Варочная поверхность' },
+  oven:          { powerW: 3500, ratingA: 16, poles: 1, note: 'Духовой шкаф' },
+  washer:        { powerW: 2500, ratingA: 16, poles: 1, note: 'Стиральная машина' },
+  dishwasher:    { powerW: 2200, ratingA: 16, poles: 1, note: 'Посудомоечная машина' },
+  ac:            { powerW: 2500, ratingA: 16, poles: 1, note: 'Кондиционер' },
+  boiler:        { powerW: 2000, ratingA: 16, poles: 1, note: 'Водонагреватель' },
   electric_floor: { powerW: 1000, ratingA: 10, poles: 1, note: 'Тёплый пол' },
-  sauna:        { powerW: 6000, ratingA: 25, poles: 2, note: 'Электросауна' },
+  sauna:         { powerW: 6000, ratingA: 25, poles: 2, note: 'Электросауна' },
+  refrigerator:  { powerW: 300,  ratingA: 6,  poles: 1, note: 'Холодильник' },
+  voltage_relay: { powerW: 0,   ratingA: 6,  poles: 2, note: 'Реле напряжения' },
+  din_rail_socket: { powerW: 3500, ratingA: 16, poles: 1, note: 'Розетка на DIN-рейку' },
+  dryer:         { powerW: 2500, ratingA: 16, poles: 1, note: 'Сушильная машина' },
+  outdoor_socket: { powerW: 2000, ratingA: 10, poles: 1, note: 'Уличная розетка' },
+  ventilation:   { powerW: 500,  ratingA: 6,  poles: 1, note: 'Приточная вентиляция' },
 }

@@ -46,10 +46,17 @@ const SPECIAL_LOADS = [
   { value: 'cooktop', label: 'Варочная поверхность', typicalW: 7000 },
   { value: 'oven', label: 'Духовой шкаф', typicalW: 3500 },
   { value: 'washer', label: 'Стиральная машина', typicalW: 2500 },
+  { value: 'dryer', label: 'Сушильная машина', typicalW: 2500 },
   { value: 'dishwasher', label: 'Посудомоечная машина', typicalW: 2200 },
+  { value: 'refrigerator', label: 'Холодильник', typicalW: 300 },
   { value: 'ac', label: 'Кондиционер', typicalW: 2500 },
   { value: 'boiler', label: 'Водонагреватель', typicalW: 2000 },
   { value: 'electric_floor', label: 'Тёплый пол', typicalW: 1000 },
+  { value: 'din_rail_socket', label: 'Розетка на DIN-рейку', typicalW: 3500 },
+  { value: 'voltage_relay', label: 'Реле напряжения', typicalW: 0 },
+  { value: 'ventilation', label: 'Приточная вентиляция', typicalW: 500 },
+  { value: 'outdoor_socket', label: 'Уличная розетка', typicalW: 2000 },
+  { value: 'sauna', label: 'Электросауна', typicalW: 6000 },
 ]
 
 /** Popover с пояснением для систем заземления */
