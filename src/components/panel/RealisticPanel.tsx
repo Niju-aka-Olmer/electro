@@ -468,7 +468,7 @@ export function RealisticPanel({
         {/* Корпус */}
         <div className="absolute -left-0.5 top-4 w-2 h-4 rounded-full bg-gray-400 border border-gray-500" />
         <div className="absolute -left-0.5 bottom-4 w-2 h-4 rounded-full bg-gray-400 border border-gray-500" />
-        <div className="bg-gray-50 rounded-sm border border-gray-200 overflow-hidden" style={{ width: '100%', minHeight: 200 }}>
+        <div className="bg-gray-50 rounded-sm border border-gray-200 overflow-hidden" style={{ width: '100%', height: Math.max(400, rows.length * (DEV_H + ROW_GAP) + 100) }}>
           <ReactFlowProvider>
             <ReactFlow
               nodes={rfNodes}
