@@ -1,8 +1,8 @@
 'use client'
 
 import React, { useState, useEffect, useMemo } from 'react'
-import { DndContext, closestCenter, DragEndEvent } from '@dnd-kit/core'
-import { SortableContext, useSortable, horizontalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
+import { DndContext, DragEndEvent } from '@dnd-kit/core'
+import { SortableContext, useSortable, rectSortingStrategy, arrayMove } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import type { CalculationResult, CircuitBreaker, RCD, PhaseId } from '@/types/electrical'
 
@@ -353,12 +353,10 @@ function DinRail({ width }: { width: number }) {
 function DeviceRow({
   row,
   rowIndex,
-  onDragEnd,
   supplyPhases,
 }: {
   row: PanelItem[]
   rowIndex: number
-  onDragEnd: (event: DragEndEvent) => void
   supplyPhases: 1 | 3
 }) {
   const rowWidth = row.reduce((s, i) => s + i.modules * MOD_W, 0)
@@ -375,15 +373,11 @@ function DeviceRow({
         <div className="relative">
           <DinRail width={rowWidth} />
           <div style={{ marginTop: -(DIN_H + DEV_H + 7) }}>
-            <DndContext collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-              <SortableContext items={row.map(i => i.id)} strategy={horizontalListSortingStrategy}>
-                <div className="flex" style={{ paddingBottom: 6 }}>
-                  {row.map(item => (
-                    <DeviceCard key={item.id} item={item} />
-                  ))}
-                </div>
-              </SortableContext>
-            </DndContext>
+            <div className="flex" style={{ paddingBottom: 6 }}>
+              {row.map(item => (
+                <DeviceCard key={item.id} item={item} />
+              ))}
+            </div>
           </div>
         </div>
         {/* Логические связи УЗО/диф → автоматы */}
@@ -548,17 +542,20 @@ export function RealisticPanel({
 
       {/* Корпус */}
       <PanelEnclosure>
-        <div className="flex flex-col" style={{ gap: 36 }}>
-          {rows.map((row, ri) => (
-            <DeviceRow
-              key={ri}
-              row={row}
-              rowIndex={ri}
-              onDragEnd={handleDragEnd}
-              supplyPhases={result.supplyPhases}
-            />
-          ))}
-        </div>
+        <DndContext onDragEnd={handleDragEnd}>
+          <SortableContext items={items.map(i => i.id)} strategy={rectSortingStrategy}>
+            <div className="flex flex-col" style={{ gap: 36 }}>
+              {rows.map((row, ri) => (
+                <DeviceRow
+                  key={ri}
+                  row={row}
+                  rowIndex={ri}
+                  supplyPhases={result.supplyPhases}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
       </PanelEnclosure>
 
       <span className="text-[10px] text-gray-400 font-mono">Перетаскивайте устройства для изменения порядка</span>
