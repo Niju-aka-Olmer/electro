@@ -248,6 +248,20 @@ export default function CalculatorResults() {
                   <td className="px-4 py-2.5">{b.modules}</td>
                 </tr>
               ))}
+              {/* Оборудование щитка (без автомата) */}
+              {panelEquipment && panelEquipment.length > 0 && panelEquipment.map(eq => (
+                <tr key={eq.id} className="bg-gray-50 dark:bg-gray-950/10">
+                  <td className="px-4 py-2.5">
+                    <span className="rounded-md border border-gray-300 bg-gray-100 px-2 py-0.5 text-[11px] text-gray-600">
+                      Обор.
+                    </span>
+                  </td>
+                  <td className="px-4 py-2.5 text-text-muted italic">{eq.name}</td>
+                  <td className="px-4 py-2.5 text-text-muted">—</td>
+                  <td className="px-4 py-2.5 text-text-muted">—</td>
+                  <td className="px-4 py-2.5">{eq.modules}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>

@@ -39,6 +39,8 @@ function devColor(type: string): { stripe: string; bg: string; text: string; lab
       return { stripe: 'bg-blue-400', bg: 'bg-blue-50', text: 'text-blue-700', label: 'УЗО' }
     case 'diff_breaker':
       return { stripe: 'bg-cyan-500', bg: 'bg-cyan-50', text: 'text-cyan-700', label: 'ДИФ' }
+    case 'panel_equipment':
+      return { stripe: 'bg-gray-300', bg: 'bg-gray-100', text: 'text-gray-500', label: 'ОБ' }
     default:
       return { stripe: 'bg-gray-400', bg: 'bg-gray-50', text: 'text-gray-700', label: 'АВ' }
   }
@@ -475,6 +477,25 @@ export function RealisticPanel({
         poles: d.poles,
         protectedGroupIds: isRcd ? (d as RCD).protectedGroups : [],
       })
+    }
+
+    // Оборудование щитка без автомата (реле напряжения, DIN-розетка и т.п.)
+    if (result.panelEquipment) {
+      for (const eq of result.panelEquipment) {
+        newItems.push({
+          id: `eq_${eq.id}`,
+          type: 'panel_equipment',
+          ref: '—',
+          label: eq.name,
+          sublabel: `${eq.modules} модуля`,
+          modules: eq.modules,
+          phase: undefined,
+          rating: 0,
+          character: '',
+          poles: 1,
+          protectedGroupIds: [],
+        })
+      }
     }
 
     setItems(newItems)

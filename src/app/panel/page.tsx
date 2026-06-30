@@ -23,7 +23,7 @@ interface SpecRow {
 
 /** Формируем строки спецификации в порядке щитка */
 function buildSpec(inOrderIds: string[], result: CalculationResult): SpecRow[] {
-  const { mainBreaker, loadBreakSwitch, devices } = result
+  const { mainBreaker, loadBreakSwitch, devices, panelEquipment } = result
 
   // Индексация по id
   const byId = new Map<string, CircuitBreaker | RCD | LoadBreakSwitch>()
@@ -35,6 +35,21 @@ function buildSpec(inOrderIds: string[], result: CalculationResult): SpecRow[] {
   const rows: SpecRow[] = []
 
   for (const id of inOrderIds) {
+    // Оборудование щитка (без автомата)
+    if (id.startsWith('eq_')) {
+      const eq = panelEquipment?.find(e => `eq_${e.id}` === id)
+      if (eq) {
+        rows.push({
+          id: `eq_${eq.id}`, ref: '—', type: 'Обор.',
+          group: eq.name,
+          rating: `${eq.modules} модуля`,
+          phase: '—',
+          modules: eq.modules,
+        })
+      }
+      continue
+    }
+
     const d = byId.get(id)
     if (!d) continue
 
@@ -80,6 +95,7 @@ function rowStyle(type: string): string {
     case 'Ввод': return 'bg-pink-50 dark:bg-pink-950/20'
     case 'УЗО': return 'bg-orange-50 dark:bg-orange-950/20'
     case 'Диф': return 'bg-cyan-50 dark:bg-cyan-950/20'
+    case 'Обор.': return 'bg-gray-50 dark:bg-gray-950/10'
     default: return ''
   }
 }
@@ -90,6 +106,7 @@ function typeTag(type: string): { bg: string; border: string; text: string } {
     case 'Ввод': return { bg: 'bg-pink-100', border: 'border-pink-300', text: 'text-pink-800' }
     case 'УЗО': return { bg: 'bg-orange-100', border: 'border-orange-300', text: 'text-orange-800' }
     case 'Диф': return { bg: 'bg-cyan-100', border: 'border-cyan-300', text: 'text-cyan-800' }
+    case 'Обор.': return { bg: 'bg-gray-100', border: 'border-gray-300', text: 'text-gray-700' }
     default: return { bg: 'bg-blue-100', border: 'border-blue-300', text: 'text-blue-800' }
   }
 }
