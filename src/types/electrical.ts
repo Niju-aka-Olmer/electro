@@ -121,6 +121,7 @@ export interface CalculationResult {
   panelEquipment: PanelEquipment[]  // оборудование щитка без автомата
   warnings: string[]
   notes: string[]
+  explanation: string   // краткое пояснение для обывателя: почему выбрано именно такое оборудование
 }
 
 // Типы для схем

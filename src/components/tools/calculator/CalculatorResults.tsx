@@ -65,7 +65,7 @@ export default function CalculatorResults() {
 
   if (!result) return null
 
-  const { mainBreaker, devices, totalModules, recommendedPanelModules, panelEquipment, warnings, notes } = result
+  const { mainBreaker, devices, totalModules, recommendedPanelModules, panelEquipment, warnings, notes, explanation } = result
 
   const rcds = devices.filter(isRCD).filter(d => d.type === 'rcd')
   const diffDevices = devices.filter(isRCD).filter(d => d.type === 'diff_breaker')
@@ -154,30 +154,31 @@ export default function CalculatorResults() {
         </div>
       )}
 
-      {/* Секция: как рассчитывалось */}
-      <div className="rounded-xl border border-border bg-bg-elevated p-5">
-        <h3 className="mb-3 text-lg font-semibold font-display">📐 Как рассчитывалось</h3>
-        <div className="space-y-2 text-sm text-text-secondary leading-relaxed">
-          <p><strong className="text-text-primary">Вводной автомат {mainBreaker.rating}{mainBreaker.characteristic}</strong>
-            — выбран по разрешённой мощности счётчика ({input.meterAmps}А).
-            Это ограничение от сетевой компании — больше нельзя, выбьет вводной автомат.</p>
-
-          <p><strong className="text-text-primary">Групповые автоматы (розетки, свет, техника)</strong>
-            — на каждую комнату рассчитаны автоматы по ПУЭ-7:
-            розетки 16А (стандарт), свет 10А (активная нагрузка),
-            мощные приборы — по их паспортной мощности с запасом 25%.</p>
-
-          <p><strong className="text-text-primary">УЗО и дифавтоматы</strong>
-            — для влажных помещений (ванная, туалет) обязательно УЗО 10мА (ПУЭ 7.1.83).
-            Для остальных комнат — УЗО 30мА. Дифавтомат — это УЗО и автомат в одном корпусе.</p>
-
-          <p><strong className="text-text-primary">Предупреждение про сумму номиналов</strong>
-            — автоматы рассчитаны на <em>максимальный</em> ток каждой группы,
-            но в реальности все группы одновременно не работают на полную мощность.
-            Поэтому сумма номиналов (например, 217А) может быть больше вводного (25А) — это нормально.
-            Это называется <em>селективность</em>. Вводной отключится только если реальный общий ток превысит 25А.</p>
+      {/* Объяснение простым языком */}
+      {explanation && (
+        <div className="rounded-xl border border-border bg-bg-elevated p-5">
+          <h3 className="mb-3 text-lg font-semibold font-display">📐 Почему именно так</h3>
+          <div className="space-y-3 text-sm text-text-secondary leading-relaxed">
+            {explanation.split('\n').map((line, i) => {
+              if (!line.trim()) return <div key={i} className="h-2" />
+              if (line.startsWith('## ')) {
+                return <h4 key={i} className="mt-4 mb-2 text-base font-semibold text-text-primary">{line.replace('## ', '')}</h4>
+              }
+              // Рендерим **жирный текст**
+              const parts = line.split(/(\*\*[^*]+\*\*)/g)
+              return (
+                <p key={i}>
+                  {parts.map((part, j) =>
+                    part.startsWith('**') && part.endsWith('**')
+                      ? <strong key={j} className="text-text-primary">{part.slice(2, -2)}</strong>
+                      : part
+                  )}
+                </p>
+              )
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Спецификация */}
       <div>
