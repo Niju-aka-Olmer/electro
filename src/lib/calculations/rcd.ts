@@ -117,10 +117,17 @@ export function generateRCDStrategy(
   const totalGroups = groupBreakers.length
 
   /** Создать устройства для влажной комнаты по выбранной стратегии */
-  function makeWetRoomDiffs(room: RoomConfig): RCD[] {
-    const socketBreakers = groupBreakers.filter(b => b.id.startsWith(room.id) && b.id.includes('socket'))
-    const lightBreakers = groupBreakers.filter(b => b.id.startsWith(room.id) && b.id.includes('light'))
-    const loadBreakers = groupBreakers.filter(b => b.id.startsWith(room.id) && b.id.includes('load'))
+  function makeWetRoomDiffs(room: RoomConfig, skipBreakerIds?: Set<string>): RCD[] {
+    let socketBreakers = groupBreakers.filter(b => b.id.startsWith(room.id) && b.id.includes('socket'))
+    let lightBreakers = groupBreakers.filter(b => b.id.startsWith(room.id) && b.id.includes('light'))
+    let loadBreakers = groupBreakers.filter(b => b.id.startsWith(room.id) && b.id.includes('load'))
+
+    // Исключаем breaker'ы, обрабатываемые отдельно (водозависимые приборы)
+    if (skipBreakerIds) {
+      socketBreakers = socketBreakers.filter(b => !skipBreakerIds.has(b.id))
+      lightBreakers = lightBreakers.filter(b => !skipBreakerIds.has(b.id))
+      loadBreakers = loadBreakers.filter(b => !skipBreakerIds.has(b.id))
+    }
 
     // Тёплый пол — всегда отдельный диф (ПУЭ 7.1.84)
     const floorHeatingBreakers = loadBreakers.filter(b => b.id.includes('electric_floor'))
@@ -191,6 +198,42 @@ export function generateRCDStrategy(
       ))
     }
 
+    return result
+  }
+
+  /**
+   * Создать индивидуальные дифавтоматы для водозависимых приборов
+   * (стиральная машина, посудомоечная машина, бойлер/водонагреватель).
+   * Используется для стратегии 'separate' — каждый такой прибор на своём дифе.
+   */
+  function makeWaterRelatedDiffs(): RCD[] {
+    const WATER_RELATED = ['washer', 'dishwasher', 'boiler', 'water_heater']
+    const labels: Record<string, string> = {
+      washer: 'стиральная машина',
+      dishwasher: 'посудомоечная машина',
+      boiler: 'водонагреватель',
+      water_heater: 'бойлер',
+    }
+
+    const result: RCD[] = []
+    for (const breaker of groupBreakers) {
+      const matchedKey = WATER_RELATED.find(k => breaker.id.includes(k))
+      if (!matchedKey) continue
+
+      // Определяем комнату
+      const room = rooms.find(r => breaker.id.startsWith(r.id))
+      const roomName = room?.name || matchedKey
+      const label = labels[matchedKey]
+
+      result.push(createDiffBreaker(
+        `diff_${breaker.id}`,
+        Math.min(breaker.rating, 25) as 10 | 25 | 40 | 63,
+        10,
+        `${roomName} (${label})`,
+        `Индивидуальный дифавтомат на ${label} в ${roomName}. ` +
+        `Прибор связан с водой — УЗО 10мА (ПУЭ 7.1.83).`
+      ))
+    }
     return result
   }
 
@@ -294,6 +337,10 @@ export function generateRCDStrategy(
 
   // Для маленьких квартир (≤8 групп) — одно вводное УЗО
   if (totalGroups <= 8) {
+    // Водозависимые приборы → индивидуальные дифы (для стратегии 'separate')
+    const waterRelatedDiffs = bathroomStrategy === 'separate' ? makeWaterRelatedDiffs() : []
+    const waterRelatedIds = new Set(waterRelatedDiffs.map(d => d.id.replace(/^diff_/, '')))
+
     const mainRCD = createRCD(
       'rcd_main',
       selectRCDRating(groupBreakers),
@@ -306,17 +353,21 @@ export function generateRCDStrategy(
 
     const wetRoomDiffs: RCD[] = rooms
       .filter(r => HIGH_RISK_ROOMS.includes(r.type))
-      .flatMap(makeWetRoomDiffs)
+      .flatMap(r => makeWetRoomDiffs(r, waterRelatedIds))
 
     const strategyLabel = bathroomStrategy === 'economy'
       ? `один диф на влажное помещение (розетки+свет через него)`
       : `отдельные дифавтоматы на розетки и на свет в каждом влажном помещении`
 
+    const extraSeparate = waterRelatedDiffs.length > 0
+      ? `\nДополнительно: индивидуальные дифавтоматы 10мА на водозависимые приборы (стиральная, посудомоечная, водонагреватель).`
+      : ``
+
     return {
       strategy: 'single',
-      devices: [mainRCD, ...wetRoomDiffs],
+      devices: [mainRCD, ...waterRelatedDiffs, ...wetRoomDiffs],
       explanation: `Выбрана схема с одним вводным УЗО ${mainRCD.ratingAmps}А/30мА для всей квартиры. `
-        + `Влажные помещения: ${strategyLabel}. `
+        + `Влажные помещения: ${strategyLabel}. ${extraSeparate}`
         + `При срабатывании вводного УЗО отключится вся квартира — это нормально для данной схемы.`
     }
   }
@@ -330,30 +381,40 @@ export function generateRCDStrategy(
 
   const devices: RCD[] = []
 
+  // Водозависимые приборы → индивидуальные дифы (для стратегии 'separate')
+  const waterRelatedDiffs = bathroomStrategy === 'separate' ? makeWaterRelatedDiffs() : []
+  const waterRelatedIds = new Set(waterRelatedDiffs.map(d => d.id.replace(/^diff_/, '')))
+
   // Влажные помещения — по выбранной стратегии
   if (zones.wet.length > 0) {
     zones.wet.forEach(room => {
-      const wetDiffs = makeWetRoomDiffs(room)
+      const wetDiffs = makeWetRoomDiffs(room, waterRelatedIds)
       devices.push(...wetDiffs)
     })
   }
 
+  // Кухня — фильтруем водозависимые приборы, у них свои дифы
   if (zones.kitchen.length > 0) {
-    const kitchenBreakers = groupBreakers.filter(b =>
+    let kitchenBreakers = groupBreakers.filter(b =>
       zones.kitchen.some(r => b.id.startsWith(r.id))
     )
-    devices.push(createRCD(
-      'rcd_kitchen',
-      selectRCDRating(kitchenBreakers),
-      30,
-      kitchenBreakers.map(b => b.group),
-      `УЗО 30мА для кухни — повышенная влажность, риск поражения током (ПУЭ 7.1.83).`
-    ))
+    kitchenBreakers = kitchenBreakers.filter(b => !waterRelatedIds.has(b.id))
+    if (kitchenBreakers.length > 0) {
+      devices.push(createRCD(
+        'rcd_kitchen',
+        selectRCDRating(kitchenBreakers),
+        30,
+        kitchenBreakers.map(b => b.group),
+        `УЗО 30мА для кухни — повышенная влажность, риск поражения током (ПУЭ 7.1.83).`
+      ))
+    }
   }
 
-  const livingBreakers = groupBreakers.filter(b =>
+  // Жилые комнаты — фильтруем водозависимые приборы
+  let livingBreakers = groupBreakers.filter(b =>
     zones.living.some(r => b.id.startsWith(r.id))
   )
+  livingBreakers = livingBreakers.filter(b => !waterRelatedIds.has(b.id))
   if (livingBreakers.length > 0) {
     devices.push(createRCD(
       'rcd_living',
@@ -364,15 +425,23 @@ export function generateRCDStrategy(
     ))
   }
 
+  // Добавляем индивидуальные дифы водозависимых приборов
+  devices.push(...waterRelatedDiffs)
+
   const strategyLabel = bathroomStrategy === 'economy'
     ? `один диф на влажное помещение (розетки+свет через него)`
     : `отдельные дифавтоматы на розетки и на свет`
+
+  const extraSeparate = waterRelatedDiffs.length > 0 && bathroomStrategy === 'separate'
+    ? `\nДополнительно: индивидуальные дифавтоматы 10мА на водозависимые приборы (стиральная, посудомоечная, водонагреватель).`
+    : ``
 
   return {
     strategy: 'grouped',
     devices,
     explanation: `Выбрана схема с групповыми УЗО по зонам. `
       + `Влажные помещения: ${strategyLabel}. `
+      + `${extraSeparate}`
       + `Преимущество: при срабатывании отключается только одна зона. `
       + `ПУЭ 7.1.83.`
   }

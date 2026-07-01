@@ -97,8 +97,9 @@ export function calcRoomBreakers(room: RoomConfig): CircuitBreaker[] {
   // --- Спецнагрузки (отдельная группа на каждую) ---
   for (const load of room.loads) {
     if (load.hasSeparateGroup) {
-      const loadAmps = powerToAmps(load.powerW)
-      const rating = selectBreakerRating(loadAmps)
+      // Используем фиксированный номинал из STANDARD_LOADS, если он задан
+      const standardLoad = STANDARD_LOADS[load.id]
+      const rating = standardLoad?.ratingA ?? selectBreakerRating(powerToAmps(load.powerW))
       breakers.push({
         id: `${room.id}_load_${load.id}`,
         type: 'circuit_breaker',
@@ -107,10 +108,14 @@ export function calcRoomBreakers(room: RoomConfig): CircuitBreaker[] {
         poles: load.powerW > 4000 ? 2 : 1, // >4кВт → 2P
         modules: load.powerW > 4000 ? 2 : 1,
         group: `${load.name}: ${room.name}`,
-        reason: `${load.powerW}Вт / ${VOLTAGE}В = ${loadAmps.toFixed(1)}А, `
-          + `выбран ${rating}А с запасом. `
-          + (load.powerW > 4000 ? '2P — мощная нагрузка >4кВт. ' : '')
-          + `Отдельная группа обязательна для ${load.name} (ПУЭ 7.1.70).`
+        reason: standardLoad
+          ? `${load.name}: фиксированный номинал ${rating}А (справочник нагрузок). `
+            + (load.powerW > 4000 ? '2P — мощная нагрузка >4кВт. ' : '')
+            + `Отдельная группа обязательна для ${load.name} (ПУЭ 7.1.70).`
+          : `${load.powerW}Вт / ${VOLTAGE}В = ${powerToAmps(load.powerW).toFixed(1)}А, `
+            + `выбран ${rating}А с запасом. `
+            + (load.powerW > 4000 ? '2P — мощная нагрузка >4кВт. ' : '')
+            + `Отдельная группа обязательна для ${load.name} (ПУЭ 7.1.70).`
       })
     }
   }

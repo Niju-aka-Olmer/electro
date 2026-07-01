@@ -113,8 +113,8 @@ export function calculateAll(input: CalculationInput): CalculationResult {
   // 6. Исключаем автоматы, уже защищённые дифавтоматами
   // Дифавтомат = УЗО + автомат в одном корпусе — отдельный автомат после него не нужен
   let standaloneBreakers: CircuitBreaker[]
-  if (input.bathroomStrategy === 'everything_separated') {
-    // Стратегия «Всё раздельно»: diff ID = diff_${breaker.id} → точное совпадение
+  if (input.bathroomStrategy === 'everything_separated' || input.bathroomStrategy === 'separate') {
+    // Стратегия «Всё раздельно» или «Раздельный»: diff ID = diff_${breaker.id} → точное совпадение
     const diffBreakerIds = new Set<string>()
     for (const d of rcdDevices) {
       if (d.type === 'diff_breaker') {
