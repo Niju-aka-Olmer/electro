@@ -3,329 +3,158 @@
 ## 📁 Полная структура файлов
 
 ```
-electroplan/
-├── docs/                          # Контекст для Cursor
+electro/
+├── docs/                          # Документация
 │   ├── PROJECT_OVERVIEW.md
 │   ├── ARCHITECTURE.md
 │   ├── TECH_STACK.md
-│   └── CURRENT_STATUS.md
-│
-├── public/
-│   ├── icons/                     # SVG иконки (автоматы, УЗО, дифы)
-│   └── og-image.png
+│   ├── CURRENT_STATUS.md
+│   └── DEPLOYMENT.md
 │
 ├── src/
 │   ├── app/                       # Next.js App Router
-│   │   ├── layout.tsx             # Root layout (шрифты, тема, провайдеры)
-│   │   ├── page.tsx               # Landing / Hero
-│   │   ├── globals.css            # CSS переменные, базовые стили
+│   │   ├── layout.tsx             # Root layout
+│   │   ├── page.tsx               # Landing
+│   │   ├── globals.css            # Глобальные стили
 │   │   │
-│   │   ├── calculator/            # Калькулятор автоматики
+│   │   ├── calculator/            # Калькулятор
 │   │   │   └── page.tsx
 │   │   │
-│   │   ├── panel/                 # Расчёт щитка
+│   │   ├── panel/                 # Визуализация щитка
 │   │   │   └── page.tsx
-│   │   │
-│   │   ├── schemes/               # Схемы расключения
-│   │   │   ├── page.tsx           # Каталог схем
-│   │   │   └── [slug]/page.tsx    # Конкретная схема
 │   │   │
 │   │   ├── consultant/            # AI-консультант
 │   │   │   └── page.tsx
 │   │   │
-│   │   └── api/
-│   │       ├── calculate/route.ts # Расчёт автоматики (серверный)
-│   │       ├── consultant/route.ts# DeepSeek API стриминг
-│   │       └── export-pdf/route.ts# Генерация PDF
+│   │   └── schemes/               # Схемы (заглушка)
+│   │       └── page.tsx
 │   │
 │   ├── components/
+│   │   ├── panel/
+│   │   │   └── RealisticPanel.tsx  # Визуализация щитка (чистый HTML/CSS + dnd-kit)
 │   │   │
-│   │   ├── ui/                    # Базовые UI-примитивы (shadcn)
-│   │   │   ├── button.tsx
-│   │   │   ├── input.tsx
-│   │   │   ├── select.tsx
-│   │   │   ├── slider.tsx
-│   │   │   ├── badge.tsx
-│   │   │   ├── card.tsx
-│   │   │   ├── tooltip.tsx
-│   │   │   ├── tabs.tsx
-│   │   │   └── separator.tsx
-│   │   │
-│   │   ├── layout/                # Структурные компоненты
-│   │   │   ├── Header.tsx         # Навигация + переключатель темы
-│   │   │   ├── Footer.tsx
-│   │   │   ├── ThemeProvider.tsx  # Context для темы
-│   │   │   └── PageWrapper.tsx    # Анимированный wrapper страниц
-│   │   │
-│   │   ├── sections/              # Секции лендинга
-│   │   │   ├── HeroSection.tsx    # Главный экран
-│   │   │   ├── FeaturesSection.tsx# 4 возможности
-│   │   │   ├── HowItWorksSection.tsx # 3 шага
-│   │   │   ├── DemoSection.tsx    # Интерактивное демо
-│   │   │   └── CTASection.tsx     # Призыв к действию
-│   │   │
-│   │   ├── tools/                 # Инструменты (основной функционал)
-│   │   │   ├── calculator/
-│   │   │   │   ├── CalculatorForm.tsx      # Форма ввода параметров
-│   │   │   │   ├── RoomConfigurator.tsx    # Добавление комнат
-│   │   │   │   ├── LoadItem.tsx            # Одна нагрузка (прибор)
-│   │   │   │   ├── CalculatorResults.tsx   # Результаты расчёта
-│   │   │   │   ├── BreakerCard.tsx         # Карточка автомата
-│   │   │   │   └── MaterialsList.tsx       # BOM-список
-│   │   │   │
-│   │   │   ├── panel/
-│   │   │   │   ├── PanelConfigurator.tsx   # Компоновщик щитка
-│   │   │   │   ├── DINRail.tsx             # Визуализация DIN-рейки
-│   │   │   │   ├── ModuleItem.tsx          # Один модуль (автомат/УЗО)
-│   │   │   │   ├── PanelSummary.tsx        # Итог: размер щита
-│   │   │   │   └── PanelExport.tsx         # Кнопки экспорта
-│   │   │   │
-│   │   │   └── consultant/
-│   │   │       ├── ConsultantChat.tsx      # Чат-интерфейс
-│   │   │       ├── MessageBubble.tsx       # Сообщение (user/ai)
-│   │   │       ├── QuickPrompts.tsx        # Быстрые запросы
-│   │   │       └── StreamingResponse.tsx  # Стриминг ответа DeepSeek
-│   │   │
-│   │   └── schemes/               # Электрические схемы
-│   │       ├── SchemeViewer.tsx           # Контейнер схемы
-│   │       ├── SchemeControls.tsx         # Зум, сброс, пояснения
-│   │       ├── svg/
-│   │       │   ├── LightBoxScheme.tsx     # Расключение на свет
-│   │       │   ├── SocketBoxScheme.tsx    # Расключение на розетки
-│   │       │   ├── PassthroughScheme.tsx  # Проходной выключатель
-│   │       │   ├── CrossScheme.tsx        # Перекрёстный выключатель
-│   │       │   ├── PanelScheme.tsx        # Принципиальная схема щитка
-│   │       │   └── WireAnimator.tsx       # Анимация тока по проводам
-│   │       └── SchemeCard.tsx             # Карточка в каталоге схем
+│   │   └── tools/
+│   │       └── calculator/
+│   │           ├── CalculatorForm.tsx    # Форма ввода
+│   │           └── CalculatorResults.tsx # Результаты расчёта
 │   │
 │   ├── lib/
 │   │   ├── calculations/
-│   │   │   ├── breakers.ts         # Логика выбора автоматов
-│   │   │   ├── rcd.ts              # Логика УЗО/дифавтоматов
-│   │   │   ├── panel.ts            # Расчёт модулей щитка
-│   │   │   ├── cable.ts            # Выбор сечения кабеля
-│   │   │   └── constants.ts        # ПУЭ-константы, таблицы токов
+│   │   │   ├── breakers.ts        # Логика выбора автоматов + STANDARD_LOADS
+│   │   │   ├── rcd.ts             # Логика УЗО/дифавтоматов
+│   │   │   └── panel.ts           # Расчёт модулей и выбор щитка
 │   │   │
-│   │   ├── deepseek.ts             # DeepSeek API клиент
-│   │   ├── pdf-generator.ts        # Генерация PDF-отчёта
-│   │   └── utils.ts                # cn(), форматирование
-│   │
-│   ├── hooks/
-│   │   ├── useCalculator.ts        # Хук калькулятора
-│   │   ├── usePanel.ts             # Хук конфигуратора щитка
-│   │   ├── useTheme.ts             # Хук темы
-│   │   └── useSchemeZoom.ts        # Зум схемы (pinch/scroll)
+│   │   ├── calculate.ts           # Сборка полного расчёта (generateLoadItems)
+│   │   ├── deepseek.ts            # DeepSeek API клиент
+│   │   └── utils.ts               # cn(), форматирование
 │   │
 │   ├── store/
-│   │   ├── calculatorStore.ts      # Zustand: состояние расчёта
-│   │   └── panelStore.ts           # Zustand: состояние щитка
+│   │   └── calculatorStore.ts     # Zustand store
 │   │
-│   ├── types/
-│   │   ├── electrical.ts           # Типы: Breaker, RCD, Load...
-│   │   ├── calculator.ts           # Типы форм калькулятора
-│   │   └── scheme.ts               # Типы схем
-│   │
-│   └── data/
-│       ├── schemes.ts              # Метаданные схем (slug, title, desc)
-│       ├── equipment.ts            # Каталог оборудования (ABB, Legrand)
-│       └── prompts.ts              # Системный промпт для DeepSeek
+│   └── types/
+│       └── electrical.ts          # Все типы: Breaker, RCD, PanelItem, Load...
 │
+├── package.json
 ├── tailwind.config.ts
-├── next.config.ts
 └── tsconfig.json
 ```
 
 ---
 
-## 🧩 Компоненты — детальное описание
+## 🧩 Ключевые компоненты
 
-### Layout компоненты
+### RealisticPanel.tsx — Визуализация щитка
 
-#### `Header.tsx`
-Sticky навигация с glassmorphism-эффектом.
-- Логотип (молния + "ElectroPlan")
-- Nav-ссылки: Калькулятор / Щиток / Схемы / Консультант
-- ThemeToggle (sun/moon с анимацией rotate)
-- Mobile: бургер → drawer
+Главный компонент для отображения электрического щитка в реалистичном виде.
 
-#### `ThemeProvider.tsx`
-Context + localStorage персистентность.
-Применяет `data-theme="dark|light"` на `<html>`.
-Без flash при загрузке (inline script в `<head>`).
+**Архитектура рендеринга:**
+```
+Enclosure (серый корпус)
+  └── rows (flex-col)
+       └── PanelRow
+            ├── Bus (3 полосы: PE, N, L)
+            ├── Drops (вертикальные линии 1px к устройствам)
+            ├── DeviceCards (flex, sortable через dnd-kit)
+            ├── DIN-рейка (градиент)
+            ├── GroupBrackets (скобки УЗО/диф → автоматы)
+            └── Out (N/PE выходные шины + метки нагрузок)
+```
 
-#### `PageWrapper.tsx`
-Framer Motion `AnimatePresence` + `motion.div` для page transitions.
-Fade + slight Y-shift между страницами.
+**Константы:**
+```typescript
+const MOD = 56       // px на 1 DIN-модуль
+const CARD_H = 68    // высота карточки устройства
+const BUS_H = 6      // высота полосы шины
+const DROP_H = 32    // высота спусков
+const OUT_H = 56     // высота выходов
+const ROW_GAP = 12   // зазор между рядами
+```
+
+**Подкомпоненты (внутри RealisticPanel.tsx):**
+- `DeviceCard` — sortable карточка устройства (useSortable от dnd-kit)
+  - Цветная полоса слева (3px)
+  - Номинал и символ устройства
+  - Номер (ref) справа сверху
+  - Клеммы подключения сверху и снизу (кружки)
+- `GroupBrackets` — вертикальные скобки, объединяющие УЗО/диф с его автоматами
+- `PanelRow` — один ряд устройств
+- `Enclosure` — внешний корпус щитка
+
+**Цвета проводки:**
+- L (фаза): `#e74c3c` (красный)
+- N (ноль): `#3498db` (синий)
+- PE (земля): `#27ae60` (зелёный)
+
+**История реализации:**
+1. ✅ Чистый HTML/CSS — первая версия
+2. ❌ React Flow (@xyflow/react) — попытка, отказались (масштаб, линии сливались)
+3. ✅ Чистый HTML/CSS + @dnd-kit — финальная версия
 
 ---
 
-### Секции лендинга
+### CalculatorForm.tsx — Форма калькулятора
+- Многошаговое взаимодействие через `useState` в `calculatorStore`
+- Выбор типа помещения, количества этажей, фазности
+- Добавление комнат: название, розеточные группы, освещение
+- Выбор спецнагрузок из STANDARD_LOADS
 
-#### `HeroSection.tsx`
-- Fullscreen, тёмный фон с сеткой (CSS grid-background)
-- Анимированный заголовок (stagger по словам)
-- Подзаголовок + 2 CTA-кнопки
-- Декоративная SVG-схема щитка справа (анимация тока)
-- Floating-бейджи: "ПУЭ-7 совместимо", "220В Россия/СНГ"
-
-#### `FeaturesSection.tsx`
-4 карточки с hover-эффектом (amber border glow):
-1. Калькулятор автоматики
-2. Конструктор щитка
-3. Интерактивные схемы
-4. AI-консультант
-
-#### `HowItWorksSection.tsx`
-3 шага с анимированным timeline-коннектором:
-1. Описываете помещение
-2. Получаете расчёт
-3. Скачиваете PDF
+### CalculatorResults.tsx — Результаты расчёта
+- Вводной автомат
+- УЗО/дифавтоматы
+- Групповые автоматы
+- Материалы (BOM)
+- Кнопка печати
 
 ---
 
-### Tools / Calculator
+## 🗄️ Логика расчёта
 
-#### `CalculatorForm.tsx`
-Многошаговая форма (Stepper):
-- Шаг 1: Тип (квартира/дом), площадь, этажей
-- Шаг 2: Комнаты + нагрузки (добавить/удалить)
-- Шаг 3: Доп. параметры (вводной кабель, система заземления TN-C-S/TN-S)
+### calculate.ts — Центральный модуль сборки
 
-#### `RoomConfigurator.tsx`
-Карточка комнаты с accordion:
-- Название комнаты
-- Кол-во розеточных групп
-- Кол-во точек освещения
-- Спецнагрузки (варочная, духовка, стиралка, кондей — чекбоксы)
+Функция `generateLoadItems()`:
+1. Читает выбранные нагрузки из STANDARD_LOADS
+2. Добавляет **panelEquipment** (voltage_relay, din_rail_socket) — устройства без автомата, только занимают модули
+3. Сортирует: mainBreaker → panelEquipment → RCDs → breakers
+4. Возвращает `CalculationResult` со всеми устройствами
 
-#### `CalculatorResults.tsx`
-Анимированный reveal результатов:
-- Секция вводного автомата
-- Секция УЗО/дифавтоматов
-- Секция групповых автоматов
-- Таблица: Наименование / Номинал / Кол-во / Причина
+### breakers.ts — Автоматы
+- `STANDARD_LOADS` — словарь предустановленных нагрузок
+- `selectBreakerRating()` — выбор номинала по току
+- `calcMainBreaker()` — расчёт вводного
+- `calcRoomBreakers()` — групповые автоматы
 
-#### `BreakerCard.tsx`
-Карточка одного устройства:
-- Иконка типа (автомат / УЗО / диф)
-- Номинал (большим шрифтом, монospace)
-- Характеристика (B/C/D)
-- Ток утечки (для УЗО)
-- Tooltip с пояснением выбора
+### rcd.ts — УЗО/дифы
+- `generateRCDStrategy()` — три стратегии защиты:
+  - `economy` — один дифавтомат на влажное помещение
+  - `separate` — отдельно на розетки и на свет
+  - `everything_separated` — индивидуальный дифавтомат на КАЖДЫЙ breaker (максимальная селективность)
+- Приборы, связанные с водой (washer, dishwasher, boiler, water_heater): 10мА
+- Влажные помещения (bathroom, toilet): 10мА
+- Тёплый пол в мокрой зоне: 10мА
 
----
-
-### Tools / Panel
-
-#### `PanelConfigurator.tsx`
-Drag-and-drop компоновщик щитка.
-- Список доступных модулей слева
-- Визуализация DIN-реек справа
-- Auto-arrange от результатов калькулятора
-
-#### `DINRail.tsx`
-SVG-визуализация DIN-рейки 35мм.
-- Слоты для модулей (каждый = 17.5мм / 1 mod)
-- Отображение установленных устройств
-- Подписи (L1, N, PE)
-- Итог: занято X из Y модулей
-
-#### `PanelSummary.tsx`
-- Итого модулей (расчёт + 20% запас)
-- Рекомендация щита: AP (наружный) / UP (встроенный)
-- Размер: 1/2/3-рядный, количество мест
-- Примеры артикулов (ABB, IEK, Legrand)
-
----
-
-### Schemes
-
-#### `LightBoxScheme.tsx`
-SVG-схема расключения распредкоробки на освещение:
-- Провода: L (коричневый), N (синий), PE (жёлто-зелёный)
-- Входящий кабель → клеммы → выход на выключатель → выход на люстру
-- Анимация тока (пунктирный дэш по фазному проводу)
-- Подписи всех проводников
-
-#### `PassthroughScheme.tsx`
-Схема проходного выключателя (2 выключателя, 1 лампа):
-- 3-жильный кабель между выключателями
-- Принцип работы: таблица переключений
-- Интерактив: клик по выключателям меняет схему (лампа вкл/выкл)
-
-#### `CrossScheme.tsx`
-Схема перекрёстного выключателя (3+ точки управления):
-- Проходные (крайние) + перекрёстный (средний)
-- Пошаговая анимация при клике
-
-#### `WireAnimator.tsx`
-Reusable компонент анимации тока:
-- Принимает SVG path ref
-- Анимирует `stroke-dashoffset` через Framer Motion
-- Цвет = цвет провода (L/N/PE/COM)
-
----
-
-### Consultant
-
-#### `ConsultantChat.tsx`
-Чат-интерфейс (похож на мессенджер, не на ChatGPT):
-- История сообщений с автоскроллом
-- Input + Send (Ctrl+Enter)
-- Streaming ответ DeepSeek
-
-#### `QuickPrompts.tsx`
-Быстрые подсказки (chips):
-- "Какой автомат на варочную панель?"
-- "Как подключить проходной выключатель?"
-- "Сколько модулей нужно в щиток для 2-комнатной квартиры?"
-- "УЗО или дифавтомат — что лучше?"
-
----
-
-## 🖥️ Инфраструктура и деплой
-
-> Подробная инструкция: `docs/DEPLOYMENT.md`
-
-### Рекомендуемый сервер (продакшн)
-```
-ОС:    Ubuntu 24.04 LTS
-CPU:   2 vCPU
-RAM:   2–4 GB
-Диск:  40 GB SSD
-```
-
-### Стек сервера
-```
-Node.js 20 LTS   — среда Next.js
-PM2              — менеджер процессов (cluster mode, 2 воркера)
-Nginx            — reverse proxy + SSL termination + кэш статики
-Certbot          — бесплатный SSL (Let's Encrypt)
-UFW              — файрвол (80, 443, 22)
-```
-
-### Схема трафика
-```
-Internet → Nginx:443 (SSL) → Next.js:3000 (PM2 cluster)
-                                ├── SSR pages
-                                ├── /api/calculate    (Node.js)
-                                ├── /api/consultant   (Edge, стриминг SSE)
-                                └── /api/export-pdf   (Node.js)
-```
-
-### Варианты хостинга
-| Вариант | Хостер | Цена/мес | Когда |
-|---------|--------|----------|-------|
-| Managed | Vercel (free) | 0 | MVP, старт |
-| Managed | Vercel Pro | $20 | Первые users |
-| VPS РФ | Timeweb Cloud | ~450 руб | Аудитория РФ |
-| VPS EU | Hetzner | ~€5 | Международная |
-| Docker | Любой VPS | цена VPS | Полный контроль |
-
-### DEEPSEEK_API_KEY — безопасность
-- Ключ только в `.env.production` на сервере
-- `НИКОГДА` не в клиентском коде (только `route.ts` без `'use client'`)
-- Rate limiting: 10 req/min на `/api/consultant`
+### panel.ts — Размер щитка
+- `countModules()` — подсчёт модулей с запасом 30%
+- `selectPanelSize()` — выбор из MODULAR_PANEL_SIZES: [12, 18, 24, 36, 48, 54, 60, 72]
 
 ---
 
@@ -333,33 +162,30 @@ Internet → Nginx:443 (SSL) → Next.js:3000 (PM2 cluster)
 
 ```
 CalculatorForm
-    ↓ (Zod-validated data)
+    ↓ (выборки в store)
 calculatorStore (Zustand)
     ↓
-lib/calculations/breakers.ts  ←→  lib/calculations/rcd.ts
+calculate.ts (generateLoadItems)
+    ├── breakers.ts   → CircuitBreaker[]
+    ├── rcd.ts        → RCDDevice[]
+    ├── panel.ts      → размер щитка
+    └── panelEquipment → оборудование (voltage_relay, din_rail_socket)
     ↓
 CalculatorResults
-    ↓ (передаёт список устройств)
-panelStore (Zustand)
     ↓
-PanelConfigurator → DINRail → PanelSummary
-    ↓
-PDF Export / Print
+RealisticPanel (визуализация щитка)
 ```
 
-## 🌐 API Routes
+---
 
-### `POST /api/calculate`
-Серверный расчёт (тяжёлые вычисления не на клиенте).
-Input: `CalculationInput` (Zod)
-Output: `CalculationResult` (автоматы, УЗО, щиток)
+## 🖥️ Стек сервера
 
-### `POST /api/consultant`
-Стриминг DeepSeek API (OpenAI-совместимый).
-Input: `{ messages: Message[], context?: CalculationResult }`
-Output: `text/event-stream`
-Системный промпт: эксперт по ПУЭ-7, ГОСТ Р 50571, объясняет просто.
+```
+Node.js 20 LTS   — среда Next.js
+Next.js 16       — SSR + API Routes
+Tailwind CSS 3   — стилизация
+Zustand 5        — состояние
+@dnd-kit         — drag-and-drop
+```
 
-### `POST /api/export-pdf`
-Input: `{ calculation, panel, title }`
-Output: `application/pdf`
+> Подробная инструкция по деплою: `docs/DEPLOYMENT.md`

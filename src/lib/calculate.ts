@@ -112,16 +112,29 @@ export function calculateAll(input: CalculationInput): CalculationResult {
 
   // 6. Исключаем автоматы, уже защищённые дифавтоматами
   // Дифавтомат = УЗО + автомат в одном корпусе — отдельный автомат после него не нужен
-  const diffRoomIds = new Set<string>()
-  for (const d of rcdDevices) {
-    if (d.type === 'diff_breaker') {
-      const m = d.id.match(/^diff_(.+?)(?:_(?:power|light|floor))?$/)
-      if (m) diffRoomIds.add(m[1])
+  let standaloneBreakers: CircuitBreaker[]
+  if (input.bathroomStrategy === 'everything_separated') {
+    // Стратегия «Всё раздельно»: diff ID = diff_${breaker.id} → точное совпадение
+    const diffBreakerIds = new Set<string>()
+    for (const d of rcdDevices) {
+      if (d.type === 'diff_breaker') {
+        diffBreakerIds.add(d.id.replace(/^diff_/, ''))
+      }
     }
+    standaloneBreakers = allBreakers.filter(b => !diffBreakerIds.has(b.id))
+  } else {
+    // Старые стратегии: префиксное совпадение по комнате
+    const diffRoomIds = new Set<string>()
+    for (const d of rcdDevices) {
+      if (d.type === 'diff_breaker') {
+        const m = d.id.match(/^diff_(.+?)(?:_(?:power|light|floor))?$/)
+        if (m) diffRoomIds.add(m[1])
+      }
+    }
+    standaloneBreakers = allBreakers.filter(b =>
+      !Array.from(diffRoomIds).some(roomId => b.id.startsWith(roomId + '_'))
+    )
   }
-  const standaloneBreakers = allBreakers.filter(b =>
-    !Array.from(diffRoomIds).some(roomId => b.id.startsWith(roomId + '_'))
-  )
 
   // 7. Расчёт щитка (с учётом breakerless оборудования)
   const panelResult = calculatePanel(mainBreaker, standaloneBreakers, rcdDevices, extraModules)

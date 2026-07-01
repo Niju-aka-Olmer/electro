@@ -552,58 +552,84 @@ export default function CalculatorForm() {
           </div>
         )}
 
-        {/* Выбор стратегии защиты влажных помещений */}
-        {existingRooms.some(r => r.type === 'bathroom' || r.type === 'toilet') && (
-          <div className="mt-8 rounded-xl border border-border bg-bg-elevated p-5">
-            <h3 className="mb-1 text-sm font-semibold text-accent-amber">
-              🚿 Защита влажных помещений
-            </h3>
-            <p className="mb-4 text-xs text-text-muted">
-              Для ванной и туалета обязательно УЗО 10мА (ПУЭ 7.1.83). Выберите схему:
-            </p>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <button
-                onClick={() => setInput({ bathroomStrategy: 'economy' })}
-                className={`rounded-xl border p-4 text-left transition-all ${
-                  (input.bathroomStrategy ?? 'economy') === 'economy'
-                    ? 'border-accent-amber bg-accent-amber/5'
-                    : 'border-border bg-bg-surface hover:border-border-accent'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-semibold text-text-primary">🔸 Эконом</span>
-                  {input.bathroomStrategy !== 'separate' && (
-                    <span className="rounded bg-accent-amber/20 px-2 py-0.5 text-[10px] text-accent-amber">рекомендуется</span>
-                  )}
-                </div>
-                <div className="space-y-1 text-xs text-text-secondary">
-                  <p><strong>1 дифавтомат</strong> на всё помещение: розетки, свет и техника — через один диф 10мА.</p>
-                  <p className="text-green-400">✓ Дешевле — экономия ≈ 1500₽ на комнату</p>
-                  <p className="text-text-muted">✗ При срабатывании отключается и свет, и розетки</p>
+        {/* Выбор стратегии защиты */}
+        <div className="mt-8 rounded-xl border border-border bg-bg-elevated p-5">
+          <h3 className="mb-1 text-sm font-semibold text-accent-amber">
+            🛡️ Стратегия защиты (УЗО / дифавтоматы)
+          </h3>
+          <p className="mb-4 text-xs text-text-muted">
+            {existingRooms.some(r => r.type === 'bathroom' || r.type === 'toilet')
+              ? 'Для влажных помещений обязательно УЗО 10мА (ПУЭ 7.1.83). Выберите схему защиты:'
+              : 'Выберите схему защиты для всех линий:'}
+          </p>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <button
+              onClick={() => setInput({ bathroomStrategy: 'economy' })}
+              className={`rounded-xl border p-4 text-left transition-all ${
+                (input.bathroomStrategy ?? 'economy') === 'economy'
+                  ? 'border-accent-amber bg-accent-amber/5'
+                  : 'border-border bg-bg-surface hover:border-border-accent'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-semibold text-text-primary">🔸 Эконом</span>
+                {input.bathroomStrategy !== 'separate' && input.bathroomStrategy !== 'everything_separated' && (
+                  <span className="rounded bg-accent-amber/20 px-2 py-0.5 text-[10px] text-accent-amber">рекомендуется</span>
+                )}
+              </div>
+              <div className="space-y-1 text-xs text-text-secondary">
+                {existingRooms.some(r => r.type === 'bathroom' || r.type === 'toilet')
+                  ? <p><strong>1 дифавтомат</strong> на каждое влажное помещение: розетки, свет и техника — через один диф 10мА.</p>
+                  : <p><strong>Вводное УЗО</strong> на все группы. Эконом-вариант.</p>
+                }
+                <p className="text-green-400">✓ Минимум дифавтоматов</p>
+                <p className="text-text-muted">✗ При срабатывании отключается несколько линий</p>
+                {existingRooms.some(r => r.type === 'bathroom' || r.type === 'toilet') &&
                   <p className="text-text-muted">✗ Остаётесь в тёмной ванной</p>
-                </div>
-              </button>
-              <button
-                onClick={() => setInput({ bathroomStrategy: 'separate' })}
-                className={`rounded-xl border p-4 text-left transition-all ${
-                  input.bathroomStrategy === 'separate'
-                    ? 'border-accent-amber bg-accent-amber/5'
-                    : 'border-border bg-bg-surface hover:border-border-accent'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-semibold text-text-primary">🔹 Раздельный</span>
-                </div>
-                <div className="space-y-1 text-xs text-text-secondary">
-                  <p><strong>2 дифавтомата</strong>: отдельно на розетки/технику, отдельно на свет.</p>
-                  <p className="text-green-400">✓ Сработал диф розеток — свет горит, не темно</p>
-                  <p className="text-green-400">✓ Точная диагностика: сразу понятно, где проблема</p>
-                  <p className="text-text-muted">✗ Дороже — требуется 2 дифа вместо 1</p>
-                </div>
-              </button>
-            </div>
+                }
+              </div>
+            </button>
+            <button
+              onClick={() => setInput({ bathroomStrategy: 'separate' })}
+              className={`rounded-xl border p-4 text-left transition-all ${
+                input.bathroomStrategy === 'separate'
+                  ? 'border-accent-amber bg-accent-amber/5'
+                  : 'border-border bg-bg-surface hover:border-border-accent'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-semibold text-text-primary">🔹 Раздельный</span>
+              </div>
+              <div className="space-y-1 text-xs text-text-secondary">
+                {existingRooms.some(r => r.type === 'bathroom' || r.type === 'toilet')
+                  ? <p><strong>2 дифавтомата</strong> на влажное помещение: розетки/техника и свет раздельно.</p>
+                  : <p><strong>Отдельные дифавтоматы</strong> на розетки и на свет в каждом помещении.</p>
+                }
+                <p className="text-green-400">✓ Сработал диф розеток — свет горит</p>
+                <p className="text-green-400">✓ Точнее диагностика проблемы</p>
+                <p className="text-text-muted">✗ Дороже эконома</p>
+              </div>
+            </button>
+            <button
+              onClick={() => setInput({ bathroomStrategy: 'everything_separated' })}
+              className={`rounded-xl border p-4 text-left transition-all ${
+                input.bathroomStrategy === 'everything_separated'
+                  ? 'border-accent-amber bg-accent-amber/5'
+                  : 'border-border bg-bg-surface hover:border-border-accent'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-semibold text-text-primary">🔸 Всё раздельно</span>
+              </div>
+              <div className="space-y-1 text-xs text-text-secondary">
+                <p><strong>Индивидуальный дифавтомат</strong> на КАЖДУЮ линию (розетки, свет, каждый прибор).</p>
+                <p className="text-green-400">✓ Максимальная селективность — отключается ТОЛЬКО одна линия</p>
+                <p className="text-green-400">✓ Влажные помещения — 10мА, приборы с водой — 10мА</p>
+                <p className="text-text-muted">✗ Много дифавтоматов — больше места в щитке</p>
+              </div>
+            </button>
           </div>
-        )}
+        </div>
       </section>
 
       {/* Управление снизу */}

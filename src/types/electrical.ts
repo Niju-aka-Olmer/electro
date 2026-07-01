@@ -103,7 +103,7 @@ export interface CalculationInput {
   supplyPhases: 1 | 3
   meterAmps: 25 | 32 | 40 | 50 | 63 // разрешённая мощность от сети
   rooms: RoomConfig[]
-  bathroomStrategy?: 'economy' | 'separate' // стратегия защиты влажных помещений
+  bathroomStrategy?: 'economy' | 'separate' | 'everything_separated' // стратегия защиты
   useMasterSwitch?: boolean // рубильник/мастер-выключатель перед вводным (по желанию)
   masterSwitchGroups?: string[] // id помещений, обесточиваемых мастер-выключателем
 }

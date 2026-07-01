@@ -103,11 +103,12 @@ export function createDiffBreaker(
  *
  * @param bathroomStrategy - 'economy': один диф на влажное помещение (розетки+свет через него)
  *                          - 'separate': отдельный диф на розетки и отдельный на свет
+ *                          - 'everything_separated': индивидуальный диф на КАЖДЫЙ breaker всех помещений
  */
 export function generateRCDStrategy(
   rooms: RoomConfig[],
   groupBreakers: CircuitBreaker[],
-  bathroomStrategy: 'economy' | 'separate' = 'economy'
+  bathroomStrategy: 'economy' | 'separate' | 'everything_separated' = 'economy'
 ): {
   strategy: 'single' | 'grouped'
   devices: RCD[]
@@ -191,6 +192,104 @@ export function generateRCDStrategy(
     }
 
     return result
+  }
+
+  /**
+   * Создать индивидуальный дифавтомат для КАЖДОГО breaker в комнате.
+   * Используется для стратегии 'everything_separated'.
+   * 
+   * Правила:
+   * - Влажные помещения (bathroom, toilet): 10мА для всех линий
+   * - Приборы, связанные с водой (washer, dishwasher, boiler, water_heater): 10мА независимо от помещения
+   * - Тёплый пол (electric_floor): 10мА в мокрой зоне, 30мА в сухой
+   * - Всё остальное: 30мА
+   */
+  function makeSeparatedDiffs(room: RoomConfig): RCD[] {
+    const roomBreakers = groupBreakers.filter(b => b.id.startsWith(room.id))
+    const isWetRoom = HIGH_RISK_ROOMS.includes(room.type)
+
+    const WATER_RELATED = ['washer', 'dishwasher', 'boiler', 'water_heater']
+
+    return roomBreakers.map(breaker => {
+      // Определяем ток утечки
+      let leakage: 10 | 30 = 30
+      const isWaterRelated = WATER_RELATED.some(id => breaker.id.includes(id))
+
+      if (isWetRoom) {
+        leakage = 10 // влажное помещение — всегда 10мА
+      } else if (isWaterRelated) {
+        leakage = 10 // прибор связан с водой — 10мА
+      } else if (breaker.id.includes('electric_floor') && isWetRoom) {
+        leakage = 10 // тёплый пол в мокрой зоне — 10мА
+      }
+
+      // Формируем читаемое имя группы
+      let groupName = room.name
+      if (breaker.id.includes('socket')) {
+        const idx = breaker.id.match(/socket_(\d+)/)?.[1] || '1'
+        groupName = `${room.name} (розетки ${idx})`
+      } else if (breaker.id.includes('light')) {
+        groupName = `${room.name} (освещение)`
+      } else if (breaker.id.includes('load_')) {
+        const loadKey = breaker.id.split('load_').pop() || ''
+        const loadLabels: Record<string, string> = {
+          washer: 'стиральная машина',
+          dryer: 'сушильная машина',
+          dishwasher: 'посудомоечная машина',
+          refrigerator: 'холодильник',
+          ac: 'кондиционер',
+          boiler: 'водонагреватель',
+          water_heater: 'бойлер',
+          electric_floor: 'тёплый пол',
+          cooktop: 'варочная панель',
+          oven: 'духовой шкаф',
+          sauna: 'сауна',
+          ventilation: 'вентиляция',
+          outdoor_socket: 'уличная розетка',
+        }
+        groupName = `${room.name} (${loadLabels[loadKey] || loadKey})`
+      }
+
+      // Номинал дифа: берём номинал автомата, но не выше 25А для дифов
+      const diffRating = Math.min(breaker.rating, 25) as 10 | 25 | 40 | 63
+
+      // Формируем обоснование
+      const reasons: string[] = [
+        `Индивидуальный дифавтомат ${diffRating}А/${leakage}мА на "${groupName}".`
+      ]
+      if (isWetRoom) {
+        reasons.push(`Влажное помещение — УЗО 10мА (ПУЭ 7.1.83).`)
+      }
+      if (isWaterRelated) {
+        reasons.push(`Прибор связан с водой — УЗО 10мА (ПУЭ 7.1.83).`)
+      }
+      reasons.push(`Максимальная селективность: при срабатывании отключается только одна линия.`)
+
+      return createDiffBreaker(
+        `diff_${breaker.id}`,
+        diffRating,
+        leakage,
+        groupName,
+        reasons.join(' ')
+      )
+    })
+  }
+
+  // Обработка стратегии 'everything_separated' — индивидуальные дифы на КАЖДЫЙ breaker
+  if (bathroomStrategy === 'everything_separated') {
+    const allDiffs: RCD[] = rooms.flatMap(makeSeparatedDiffs)
+
+    return {
+      strategy: 'grouped',
+      devices: allDiffs,
+      explanation:
+        `Выбрана максимальная схема защиты «Всё раздельно»: индивидуальный дифавтомат на КАЖДУЮ линию. ` +
+        `Всего ${allDiffs.length} дифавтоматов. ` +
+        `Влажные помещения — УЗО 10мА (ПУЭ 7.1.83). Приборы, связанные с водой (стиральная, ` +
+        `посудомоечная, водонагреватель) — УЗО 10мА независимо от помещения. ` +
+        `Преимущество: при срабатывании отключается ТОЛЬКО одна линия — остальные продолжают работать. ` +
+        `Недостаток: больше дифавтоматов = больше места в щитке.`
+    }
   }
 
   // Для маленьких квартир (≤8 групп) — одно вводное УЗО
