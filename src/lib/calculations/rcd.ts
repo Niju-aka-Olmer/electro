@@ -207,10 +207,11 @@ export function generateRCDStrategy(
    * Используется для стратегии 'separate' — каждый такой прибор на своём дифе.
    */
   function makeWaterRelatedDiffs(): RCD[] {
-    const WATER_RELATED = ['washer', 'dishwasher', 'boiler', 'water_heater']
+    // dishwasher ДО washer — иначе 'dishwasher' совпадает с подстрокой 'washer'
+    const WATER_RELATED = ['dishwasher', 'washer', 'boiler', 'water_heater']
     const labels: Record<string, string> = {
-      washer: 'стиральная машина',
       dishwasher: 'посудомоечная машина',
+      washer: 'стиральная машина',
       boiler: 'водонагреватель',
       water_heater: 'бойлер',
     }
@@ -251,7 +252,8 @@ export function generateRCDStrategy(
     const roomBreakers = groupBreakers.filter(b => b.id.startsWith(room.id))
     const isWetRoom = HIGH_RISK_ROOMS.includes(room.type)
 
-    const WATER_RELATED = ['washer', 'dishwasher', 'boiler', 'water_heater']
+    // dishwasher ДО washer — иначе 'dishwasher' совпадает с подстрокой 'washer'
+    const WATER_RELATED = ['dishwasher', 'washer', 'boiler', 'water_heater']
 
     return roomBreakers.map(breaker => {
       // Определяем ток утечки
