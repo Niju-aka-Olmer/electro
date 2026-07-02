@@ -123,7 +123,6 @@ async function exportToXlsx(
 ) {
   const XLSX = await import('xlsx')
   
-  // Группируем одинаковые устройства по артикулу
   const groups = new Map<string, { name: string; qty: number }>()
   
   for (const d of devices) {
@@ -158,47 +157,6 @@ async function exportToXlsx(
   XLSX.writeFile(wb, `electroplan-${brand.toLowerCase()}.xlsx`)
 }
 
-/** Сгруппированные строки спецификации */
-interface SpecRow {
-  name: string
-  fullName: string
-  qty: number
-  modules: number
-}
-
-function buildSpecRows(
-  devices: (CircuitBreaker | RCD)[],
-  manufacturer: Manufacturer
-): SpecRow[] {
-  const groups = new Map<string, { fullName: string; qty: number; modules: number }>()
-  
-  for (const d of devices) {
-    const fullName = getFullName(manufacturer, {
-      type: deviceType(d) as 'main_breaker' | 'circuit_breaker' | 'rcd' | 'diff_breaker' | 'load_break_switch',
-      poles: d.poles,
-      rating: deviceRating(d),
-      characteristic: deviceChar(d),
-      leakageMA: isRCD(d) ? d.leakageMA : undefined,
-    })
-    if (fullName === '—') continue
-    
-    const simpleName = !isRCD(d) ? d.group : d.protectedGroups.join(', ')
-    const existing = groups.get(fullName)
-    if (existing) {
-      existing.qty++
-    } else {
-      groups.set(fullName, { fullName, qty: 1, modules: d.modules })
-    }
-  }
-
-  return Array.from(groups.values()).map(g => ({
-    name: g.fullName,
-    fullName: g.fullName,
-    qty: g.qty,
-    modules: g.modules,
-  }))
-}
-
 export default function CalculatorResults() {
   const { result, input, setStep, reset, manufacturer, setManufacturer } = useCalculatorStore()
   const rooms = input.rooms ?? []
@@ -213,10 +171,6 @@ export default function CalculatorResults() {
     (d): d is CircuitBreaker => !isRCD(d) && d.id !== mainBreaker.id
   )
   const layout = generateLayout(devices)
-
-  // Сгруппированная спецификация
-  const specRows = buildSpecRows(devices, manufacturer)
-  const totalQty = specRows.reduce((s, r) => s + r.qty, 0)
 
   return (
     <div className="mx-auto max-w-4xl space-y-8">
@@ -354,25 +308,91 @@ export default function CalculatorResults() {
 
       {/* Спецификация */}
       <div>
-        <h3 className="mb-4 text-lg font-semibold font-display">
-          Спецификация оборудования ({MANUFACTURER_LABELS[manufacturer]})
-        </h3>
-        <p className="mb-3 text-xs text-text-muted">
-          Всего {totalQty} устройств, {specRows.length} позиций
-        </p>
+        <h3 className="mb-4 text-lg font-semibold font-display">Спецификация оборудования</h3>
         <div className="overflow-hidden rounded-xl border border-border">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-bg-elevated border-b border-border">
-                <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">Наименование</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-text-muted uppercase w-16">Кол-во</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">Тип</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">Назначение</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">Номинал</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">Хар-ка</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">Мод.</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">Артикул {MANUFACTURER_LABELS[manufacturer]}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {specRows.map((row, i) => (
-                <tr key={i}>
-                  <td className="px-4 py-2.5 text-xs">{row.name}</td>
-                  <td className="px-4 py-2.5 text-right font-medium">{row.qty}</td>
+              {/* Вводной */}
+              <tr className="bg-accent-amber/5">
+                <td className="px-4 py-2.5">
+                  <span className="rounded-md border border-accent-amber/30 bg-accent-amber/10 px-2 py-0.5 text-[11px] text-accent-amber">
+                    Ввод
+                  </span>
+                </td>
+                <td className="px-4 py-2.5 font-medium">{mainBreaker.group}</td>
+                <td className="px-4 py-2.5">{mainBreaker.rating}А</td>
+                <td className="px-4 py-2.5">{mainBreaker.characteristic}</td>
+                <td className="px-4 py-2.5">{mainBreaker.modules}</td>
+                <td className="px-4 py-2.5 font-mono text-[11px] text-text-muted">{deviceArticle(mainBreaker, manufacturer)}</td>
+              </tr>
+              {/* УЗО */}
+              {rcds.map((rcd) => (
+                <tr key={rcd.id} className="bg-accent-amber/3">
+                  <td className="px-4 py-2.5">
+                    <span className="rounded-md border border-accent-amber/30 bg-accent-amber/10 px-2 py-0.5 text-[11px] text-accent-amber">
+                      УЗО
+                    </span>
+                  </td>
+                  <td className="px-4 py-2.5">{deviceLabel(rcd)}</td>
+                  <td className="px-4 py-2.5">{rcd.ratingAmps}А</td>
+                  <td className="px-4 py-2.5">{rcd.leakageMA}мА</td>
+                  <td className="px-4 py-2.5">{rcd.modules}</td>
+                  <td className="px-4 py-2.5 font-mono text-[11px] text-text-muted">{deviceArticle(rcd, manufacturer)}</td>
+                </tr>
+              ))}
+              {/* Дифы */}
+              {diffDevices.map((diff) => (
+                <tr key={diff.id} className="bg-accent-danger/3">
+                  <td className="px-4 py-2.5">
+                    <span className="rounded-md border border-accent-danger/30 bg-accent-danger/10 px-2 py-0.5 text-[11px] text-accent-danger">
+                      Диф
+                    </span>
+                  </td>
+                  <td className="px-4 py-2.5">{deviceLabel(diff)}</td>
+                  <td className="px-4 py-2.5">{diff.ratingAmps}А</td>
+                  <td className="px-4 py-2.5">{diff.leakageMA}мА</td>
+                  <td className="px-4 py-2.5">{diff.modules}</td>
+                  <td className="px-4 py-2.5 font-mono text-[11px] text-text-muted">{deviceArticle(diff, manufacturer)}</td>
+                </tr>
+              ))}
+              {/* Групповые автоматы */}
+              {groupBreakers.map((b) => (
+                <tr key={b.id}>
+                  <td className="px-4 py-2.5">
+                    <span className="rounded-md border border-accent-info/30 bg-accent-info/10 px-2 py-0.5 text-[11px] text-accent-info">
+                      Авт
+                    </span>
+                  </td>
+                  <td className="px-4 py-2.5">{b.group}</td>
+                  <td className="px-4 py-2.5">{b.rating}А</td>
+                  <td className="px-4 py-2.5">{b.characteristic}</td>
+                  <td className="px-4 py-2.5">{b.modules}</td>
+                  <td className="px-4 py-2.5 font-mono text-[11px] text-text-muted">{deviceArticle(b, manufacturer)}</td>
+                </tr>
+              ))}
+              {/* Оборудование щитка (без автомата) */}
+              {panelEquipment && panelEquipment.length > 0 && panelEquipment.map(eq => (
+                <tr key={eq.id} className="bg-gray-50 dark:bg-gray-950/10">
+                  <td className="px-4 py-2.5">
+                    <span className="rounded-md border border-gray-300 bg-gray-100 px-2 py-0.5 text-[11px] text-gray-600">
+                      Обор.
+                    </span>
+                  </td>
+                  <td className="px-4 py-2.5 text-text-muted italic">{eq.name}</td>
+                  <td className="px-4 py-2.5 text-text-muted">—</td>
+                  <td className="px-4 py-2.5 text-text-muted">—</td>
+                  <td className="px-4 py-2.5">{eq.modules}</td>
+                  <td className="px-4 py-2.5 text-text-muted">—</td>
                 </tr>
               ))}
             </tbody>

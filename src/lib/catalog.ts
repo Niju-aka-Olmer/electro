@@ -92,64 +92,64 @@ const CATALOG: Record<string, CatalogEntry> = {
   'main_breaker_2P_25A_B': {
     abb: '2CDS252001R0255',
     abbName: 'Автоматический выключатель ABB 2-полюсный S202 B25',
-    dekraft: '11060DEK',
-    dekraftName: 'Автоматический выключатель Dekraft 2P ВА-101 B25 4.5кА',
+    dekraft: '11020DEK',
+    dekraftName: 'Автоматический выключатель Dekraft ВА-101 2P B25 4.5кА',
   },
   'main_breaker_2P_32A_B': {
     abb: '2CDS252001R0325',
     abbName: 'Автоматический выключатель ABB 2-полюсный S202 B32',
-    dekraft: '11061DEK',
-    dekraftName: 'Автоматический выключатель Dekraft 2P ВА-101 B32 4.5кА',
+    dekraft: '11021DEK',
+    dekraftName: 'Автоматический выключатель Dekraft ВА-101 2P B32 4.5кА',
   },
   'main_breaker_2P_40A_B': {
     abb: '2CDS252001R0405',
     abbName: 'Автоматический выключатель ABB 2-полюсный S202 B40',
-    dekraft: '11062DEK',
-    dekraftName: 'Автоматический выключатель Dekraft 2P ВА-101 B40 4.5кА',
+    dekraft: '11022DEK',
+    dekraftName: 'Автоматический выключатель Dekraft ВА-101 2P B40 4.5кА',
   },
   'main_breaker_2P_50A_B': {
     abb: '2CDS252001R0505',
     abbName: 'Автоматический выключатель ABB 2-полюсный S202 B50',
-    dekraft: '11063DEK',
-    dekraftName: 'Автоматический выключатель Dekraft 2P ВА-101 B50 4.5кА',
+    dekraft: '11023DEK',
+    dekraftName: 'Автоматический выключатель Dekraft ВА-101 2P B50 4.5кА',
   },
   'main_breaker_2P_63A_B': {
     abb: '2CDS252001R0635',
     abbName: 'Автоматический выключатель ABB 2-полюсный S202 B63',
-    dekraft: '11072DEK',
-    dekraftName: 'Автоматический выключатель Dekraft 2P ВА-101 B63 4.5кА',
+    dekraft: '11024DEK',
+    dekraftName: 'Автоматический выключатель Dekraft ВА-101 2P B63 4.5кА',
   },
 
   // ── Вводные автоматы 3P B ──
   'main_breaker_3P_25A_B': {
     abb: '2CDS253001R0255',
     abbName: 'Автоматический выключатель ABB 3-полюсный S203 B25',
-    dekraft: '11078DEK',
-    dekraftName: 'Автоматический выключатель Dekraft 3P ВА-101 B25 4.5кА',
+    dekraft: '11075DEK',
+    dekraftName: 'Автоматический выключатель Dekraft ВА-101 3P B25 4.5кА',
   },
   'main_breaker_3P_32A_B': {
     abb: '2CDS253001R0325',
     abbName: 'Автоматический выключатель ABB 3-полюсный S203 B32',
-    dekraft: '11079DEK',
-    dekraftName: 'Автоматический выключатель Dekraft 3P ВА-101 B32 4.5кА',
+    dekraft: '11076DEK',
+    dekraftName: 'Автоматический выключатель Dekraft ВА-101 3P B32 4.5кА',
   },
   'main_breaker_3P_40A_B': {
     abb: '2CDS253001R0405',
     abbName: 'Автоматический выключатель ABB 3-полюсный S203 B40',
-    dekraft: '11080DEK',
-    dekraftName: 'Автоматический выключатель Dekraft 3P ВА-101 B40 4.5кА',
+    dekraft: '11077DEK',
+    dekraftName: 'Автоматический выключатель Dekraft ВА-101 3P B40 4.5кА',
   },
   'main_breaker_3P_50A_B': {
     abb: '2CDS253001R0505',
     abbName: 'Автоматический выключатель ABB 3-полюсный S203 B50',
-    dekraft: '11081DEK',
-    dekraftName: 'Автоматический выключатель Dekraft 3P ВА-101 B50 4.5кА',
+    dekraft: '11078DEK',
+    dekraftName: 'Автоматический выключатель Dekraft ВА-101 3P B50 4.5кА',
   },
   'main_breaker_3P_63A_B': {
     abb: '2CDS253001R0635',
     abbName: 'Автоматический выключатель ABB 3-полюсный S203 B63',
-    dekraft: '11082DEK',
-    dekraftName: 'Автоматический выключатель Dekraft 3P ВА-101 B63 4.5кА',
+    dekraft: '11079DEK',
+    dekraftName: 'Автоматический выключатель Dekraft ВА-101 3P B63 4.5кА',
   },
 
   // ── Групповые автоматы 1P C (ABB SH201 / Dekraft ВА-101) ──
@@ -200,8 +200,8 @@ const CATALOG: Record<string, CatalogEntry> = {
   'circuit_breaker_1P_10A_B': {
     abb: '2CDS211001R0105',
     abbName: 'Автомат ABB SH201 B10 10A (B) 6kA',
-    dekraft: '11031DEK',
-    dekraftName: 'Автоматический выключатель Dekraft 1P ВА-101 B10 4.5кА',
+    dekraft: '11005DEK',
+    dekraftName: 'Автоматический выключатель Dekraft ВА-101 1P B10 4.5кА',
   },
 
   // ── 2P автоматы C (мощные нагрузки) ──
@@ -209,13 +209,13 @@ const CATALOG: Record<string, CatalogEntry> = {
     abb: '2CDS212001R0254',
     abbName: 'Автоматический выключатель ABB 2-полюсный S202 C25',
     dekraft: '11068DEK',
-    dekraftName: 'Автоматический выключатель Dekraft 2P ВА-101 C25 4.5кА',
+    dekraftName: 'Автоматический выключатель Dekraft ВА-101 2P C25 4.5кА',
   },
   'circuit_breaker_2P_32A_C': {
     abb: '2CDS212001R0324',
     abbName: 'Автоматический выключатель ABB 2-полюсный S202 C32',
     dekraft: '11069DEK',
-    dekraftName: 'Автоматический выключатель Dekraft 2P ВА-101 C32 4.5кА',
+    dekraftName: 'Автоматический выключатель Dekraft ВА-101 2P C32 4.5кА',
   },
 
   // ── УЗО 30мА (ABB F202 / Dekraft ВДТ) ──
