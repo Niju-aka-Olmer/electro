@@ -79,11 +79,17 @@ export function getEquipmentArticle(manufacturer: Manufacturer, equipmentId: str
 }
 
 /**
- * Получить полное название оборудования щитка.
+ * Получить полное название оборудования щитка (с артикулом в скобках).
  */
 export function getEquipmentFullName(manufacturer: Manufacturer, equipmentId: string): string {
-  if (equipmentId === 'voltage_relay') return CATALOG.voltage_relay[`${manufacturer}Name`]
-  if (equipmentId === 'din_rail_socket') return CATALOG.din_rail_socket[`${manufacturer}Name`]
+  if (equipmentId === 'voltage_relay') {
+    const e = CATALOG.voltage_relay
+    return `${e[`${manufacturer}Name`]} (${e[manufacturer]})`
+  }
+  if (equipmentId === 'din_rail_socket') {
+    const e = CATALOG.din_rail_socket
+    return `${e[`${manufacturer}Name`]} (${e[manufacturer]})`
+  }
   return ''
 }
 
@@ -306,9 +312,9 @@ const CATALOG: Record<string, CatalogEntry> = {
 
   // ── Розетка на DIN-рейку ──
   din_rail_socket: {
-    abb: '2CSM220685R0721',
-    abbName: 'Розетка на DIN-рейку ABB M1011 16A 250В',
-    dekraft: '19001DEK',
+    abb: '2CSM110000R0701',
+    abbName: 'Розетка на DIN-рейку ABB M1175 16A 250В',
+    dekraft: '18012DEK',
     dekraftName: 'Розетка на DIN-рейку Dekraft РМ-01 16A 250В',
   },
 }
