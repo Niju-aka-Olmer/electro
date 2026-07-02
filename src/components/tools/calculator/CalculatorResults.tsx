@@ -4,7 +4,7 @@ import { useCalculatorStore } from '@/store/calculatorStore'
 import Link from 'next/link'
 import type { CircuitBreaker, RCD } from '@/types/electrical'
 import { cn } from '@/lib/utils'
-import { getArticle, getFullName, MANUFACTURER_LABELS, type Manufacturer } from '@/lib/catalog'
+import { getArticle, getFullName, getEquipmentArticle, getEquipmentFullName, MANUFACTURER_LABELS, type Manufacturer } from '@/lib/catalog'
 
 function isRCD(d: CircuitBreaker | RCD): d is RCD {
   return 'leakageMA' in d
@@ -119,6 +119,7 @@ function deviceModules(d: CircuitBreaker | RCD): number {
 /** Экспорт спецификации в XLSX (сгруппированный) */
 async function exportToXlsx(
   devices: (CircuitBreaker | RCD)[],
+  panelEquipment: { id: string; name: string; modules: number }[] | undefined,
   manufacturer: Manufacturer
 ) {
   const XLSX = await import('xlsx')
@@ -139,6 +140,19 @@ async function exportToXlsx(
       existing.qty++
     } else {
       groups.set(fullName, { name: fullName, qty: 1 })
+    }
+  }
+
+  // Оборудование щитка
+  if (panelEquipment) {
+    for (const eq of panelEquipment) {
+      const eqName = getEquipmentFullName(manufacturer, eq.id) || eq.name
+      const existing = groups.get(eqName)
+      if (existing) {
+        existing.qty++
+      } else {
+        groups.set(eqName, { name: eqName, qty: 1 })
+      }
     }
   }
 
@@ -186,7 +200,7 @@ export default function CalculatorResults() {
         </div>
         <div className="flex gap-2">
           <button
-            onClick={() => exportToXlsx(devices, manufacturer)}
+            onClick={() => exportToXlsx(devices, panelEquipment, manufacturer)}
             title="Скачать Excel"
             className="no-print inline-flex items-center gap-1.5 rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2 text-xs font-medium text-green-400 transition-colors hover:bg-green-500/20"
           >
@@ -388,11 +402,11 @@ export default function CalculatorResults() {
                       Обор.
                     </span>
                   </td>
-                  <td className="px-4 py-2.5 text-text-muted italic">{eq.name}</td>
+                  <td className="px-4 py-2.5 text-text-secondary">{getEquipmentFullName(manufacturer, eq.id) || eq.name}</td>
                   <td className="px-4 py-2.5 text-text-muted">—</td>
                   <td className="px-4 py-2.5 text-text-muted">—</td>
                   <td className="px-4 py-2.5">{eq.modules}</td>
-                  <td className="px-4 py-2.5 text-text-muted">—</td>
+                  <td className="px-4 py-2.5 font-mono text-[11px] text-text-muted">{getEquipmentArticle(manufacturer, eq.id)}</td>
                 </tr>
               ))}
             </tbody>

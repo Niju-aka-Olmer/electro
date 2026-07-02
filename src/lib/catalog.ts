@@ -69,6 +69,24 @@ export const MANUFACTURER_LABELS: Record<Manufacturer, string> = {
   dekraft: 'Dekraft',
 }
 
+/**
+ * Получить артикул для оборудования щитка (реле напряжения, DIN-розетка).
+ */
+export function getEquipmentArticle(manufacturer: Manufacturer, equipmentId: string): string {
+  if (equipmentId === 'voltage_relay') return CATALOG.voltage_relay[manufacturer]
+  if (equipmentId === 'din_rail_socket') return CATALOG.din_rail_socket[manufacturer]
+  return '—'
+}
+
+/**
+ * Получить полное название оборудования щитка.
+ */
+export function getEquipmentFullName(manufacturer: Manufacturer, equipmentId: string): string {
+  if (equipmentId === 'voltage_relay') return CATALOG.voltage_relay[`${manufacturer}Name`]
+  if (equipmentId === 'din_rail_socket') return CATALOG.din_rail_socket[`${manufacturer}Name`]
+  return ''
+}
+
 function buildKey(p: {
   type: string
   poles: number
@@ -218,24 +236,24 @@ const CATALOG: Record<string, CatalogEntry> = {
     dekraftName: 'Автоматический выключатель Dekraft ВА-101 2P C32 4.5кА',
   },
 
-  // ── УЗО 30мА (ABB F202 / Dekraft ВДТ) ──
+  // ── УЗО 30мА (ABB F202 / Dekraft ВДТ УЗО-03) ──
   'rcd_2P_25A_30mA': {
     abb: '2CSF202101R1250',
     abbName: 'УЗО ABB F202 A-25/0.03 25А 30mA (А)',
     dekraft: '14207DEK',
-    dekraftName: 'УЗО Dekraft 2P ВДТ 25A 30mA',
+    dekraftName: 'Выключатель дифференциального тока Dekraft УЗО-03 2P 25A 30mA AC 6кА',
   },
   'rcd_2P_40A_30mA': {
     abb: '2CSF202101R1400',
     abbName: 'УЗО ABB F202 A-40/0.03 40А 30mA (А)',
-    dekraft: '14208DEK',
-    dekraftName: 'УЗО Dekraft 2P ВДТ 40A 30mA',
+    dekraft: '14209DEK',
+    dekraftName: 'Выключатель дифференциального тока Dekraft УЗО-03 2P 40A 30mA AC 6кА',
   },
   'rcd_2P_63A_30mA': {
     abb: '2CSF202101R1630',
     abbName: 'УЗО ABB F202 A-63/0.03 63А 30mA (А)',
-    dekraft: '14209DEK',
-    dekraftName: 'УЗО Dekraft 2P ВДТ 63A 30mA',
+    dekraft: '14210DEK',
+    dekraftName: 'Выключатель дифференциального тока Dekraft УЗО-03 2P 63A 30mA AC 6кА',
   },
 
   // ── Дифавтоматы (ABB DSH201R / Dekraft ДИФ-103) ──
@@ -274,61 +292,23 @@ const CATALOG: Record<string, CatalogEntry> = {
   'load_break_switch_2P_25A': {
     abb: '2CDS212001R0254',
     abbName: 'Выключатель нагрузки ABB 2P S202 25A',
-    dekraft: '12030DEK',
-    dekraftName: 'Выключатель нагрузки Dekraft 2P ВН-29 25A',
+    dekraft: '17005DEK',
+    dekraftName: 'Выключатель-разъединитель Dekraft ВН-102 2P 20A',
   },
-  'load_break_switch_2P_32A': {
-    abb: '2CDS212001R0324',
-    abbName: 'Выключатель нагрузки ABB 2P S202 32A',
-    dekraft: '12031DEK',
-    dekraftName: 'Выключатель нагрузки Dekraft 2P ВН-29 32A',
+
+  // ── Реле напряжения (единое, не зависит от бренда) ──
+  voltage_relay: {
+    abb: '4660251140069',
+    abbName: 'Реле напряжения WELROK d2-63',
+    dekraft: '4660251140069',
+    dekraftName: 'Реле напряжения WELROK d2-63',
   },
-  'load_break_switch_2P_40A': {
-    abb: '2CDS212001R0404',
-    abbName: 'Выключатель нагрузки ABB 2P S202 40A',
-    dekraft: '12032DEK',
-    dekraftName: 'Выключатель нагрузки Dekraft 2P ВН-29 40A',
-  },
-  'load_break_switch_2P_50A': {
-    abb: '2CDS212001R0504',
-    abbName: 'Выключатель нагрузки ABB 2P S202 50A',
-    dekraft: '12033DEK',
-    dekraftName: 'Выключатель нагрузки Dekraft 2P ВН-29 50A',
-  },
-  'load_break_switch_2P_63A': {
-    abb: '2CDS212001R0634',
-    abbName: 'Выключатель нагрузки ABB 2P S202 63A',
-    dekraft: '12034DEK',
-    dekraftName: 'Выключатель нагрузки Dekraft 2P ВН-29 63A',
-  },
-  'load_break_switch_4P_25A': {
-    abb: '2CDS214001R0254',
-    abbName: 'Выключатель нагрузки ABB 4P S204 25A',
-    dekraft: '12050DEK',
-    dekraftName: 'Выключатель нагрузки Dekraft 4P ВН-29 25A',
-  },
-  'load_break_switch_4P_32A': {
-    abb: '2CDS214001R0324',
-    abbName: 'Выключатель нагрузки ABB 4P S204 32A',
-    dekraft: '12051DEK',
-    dekraftName: 'Выключатель нагрузки Dekraft 4P ВН-29 32A',
-  },
-  'load_break_switch_4P_40A': {
-    abb: '2CDS214001R0404',
-    abbName: 'Выключатель нагрузки ABB 4P S204 40A',
-    dekraft: '12052DEK',
-    dekraftName: 'Выключатель нагрузки Dekraft 4P ВН-29 40A',
-  },
-  'load_break_switch_4P_50A': {
-    abb: '2CDS214001R0504',
-    abbName: 'Выключатель нагрузки ABB 4P S204 50A',
-    dekraft: '12053DEK',
-    dekraftName: 'Выключатель нагрузки Dekraft 4P ВН-29 50A',
-  },
-  'load_break_switch_4P_63A': {
-    abb: '2CDS214001R0634',
-    abbName: 'Выключатель нагрузки ABB 4P S204 63A',
-    dekraft: '12054DEK',
-    dekraftName: 'Выключатель нагрузки Dekraft 4P ВН-29 63A',
+
+  // ── Розетка на DIN-рейку ──
+  din_rail_socket: {
+    abb: '2CSM220685R0721',
+    abbName: 'Розетка на DIN-рейку ABB M1011 16A 250В',
+    dekraft: '19001DEK',
+    dekraftName: 'Розетка на DIN-рейку Dekraft РМ-01 16A 250В',
   },
 }
