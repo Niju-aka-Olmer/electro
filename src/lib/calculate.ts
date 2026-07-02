@@ -373,7 +373,7 @@ export function calculateAll(input: CalculationInput): CalculationResult {
   }
 
   if (input.rooms.some(r => r.type === 'bathroom' || r.type === 'toilet')) {
-    notes.push('Для ванной/туалета — УЗО 10мА обязательно (ПУЭ 7.1.83).')
+    notes.push('Для ванной/туалета — УЗО 30мА (стандарт для жилых помещений).')
   }
 
   // Всё собираем в результат

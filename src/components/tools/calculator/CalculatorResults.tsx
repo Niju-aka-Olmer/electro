@@ -4,7 +4,7 @@ import { useCalculatorStore } from '@/store/calculatorStore'
 import Link from 'next/link'
 import type { CircuitBreaker, RCD } from '@/types/electrical'
 import { cn } from '@/lib/utils'
-import { getArticle, MANUFACTURER_LABELS, type Manufacturer } from '@/lib/catalog'
+import { getArticle, getFullName, MANUFACTURER_LABELS, type Manufacturer } from '@/lib/catalog'
 
 function isRCD(d: CircuitBreaker | RCD): d is RCD {
   return 'leakageMA' in d
@@ -116,45 +116,87 @@ function deviceModules(d: CircuitBreaker | RCD): number {
   return d.modules
 }
 
-/** Экспорт спецификации в XLSX */
+/** Экспорт спецификации в XLSX (сгруппированный) */
 async function exportToXlsx(
   devices: (CircuitBreaker | RCD)[],
-  mainBreaker: CircuitBreaker,
   manufacturer: Manufacturer
 ) {
   const XLSX = await import('xlsx')
   
-  const rows: Record<string, string | number>[] = []
+  // Группируем одинаковые устройства по артикулу
+  const groups = new Map<string, { name: string; qty: number }>()
   
   for (const d of devices) {
-    const article = deviceArticle(d, manufacturer)
-    rows.push({
-      'Тип': deviceTypeLabel(d),
-      'Назначение': !isRCD(d) ? d.group : d.protectedGroups.join(', '),
-      'Номинал': deviceRatingLabel(d),
-      'Хар-ка': deviceCharLabel(d),
-      'Мод.': deviceModules(d),
-      'Артикул': article,
+    const fullName = getFullName(manufacturer, {
+      type: deviceType(d) as 'main_breaker' | 'circuit_breaker' | 'rcd' | 'diff_breaker' | 'load_break_switch',
+      poles: d.poles,
+      rating: deviceRating(d),
+      characteristic: deviceChar(d),
+      leakageMA: isRCD(d) ? d.leakageMA : undefined,
     })
+    if (fullName === '—') continue
+    const existing = groups.get(fullName)
+    if (existing) {
+      existing.qty++
+    } else {
+      groups.set(fullName, { name: fullName, qty: 1 })
+    }
+  }
+
+  const rows: Record<string, string | number>[] = []
+  for (const [, g] of groups) {
+    rows.push({ 'Наименование': g.name, 'Ед.': 'ШТ', 'Кол-во': g.qty })
   }
 
   const ws = XLSX.utils.json_to_sheet(rows)
-  
-  // Ширина колонок
-  ws['!cols'] = [
-    { wch: 8 },
-    { wch: 45 },
-    { wch: 10 },
-    { wch: 10 },
-    { wch: 6 },
-    { wch: 28 },
-  ]
+  ws['!cols'] = [{ wch: 80 }, { wch: 6 }, { wch: 8 }]
 
   const wb = XLSX.utils.book_new()
   const brand = MANUFACTURER_LABELS[manufacturer]
   XLSX.utils.book_append_sheet(wb, ws, `${brand}`)
   
   XLSX.writeFile(wb, `electroplan-${brand.toLowerCase()}.xlsx`)
+}
+
+/** Сгруппированные строки спецификации */
+interface SpecRow {
+  name: string
+  fullName: string
+  qty: number
+  modules: number
+}
+
+function buildSpecRows(
+  devices: (CircuitBreaker | RCD)[],
+  manufacturer: Manufacturer
+): SpecRow[] {
+  const groups = new Map<string, { fullName: string; qty: number; modules: number }>()
+  
+  for (const d of devices) {
+    const fullName = getFullName(manufacturer, {
+      type: deviceType(d) as 'main_breaker' | 'circuit_breaker' | 'rcd' | 'diff_breaker' | 'load_break_switch',
+      poles: d.poles,
+      rating: deviceRating(d),
+      characteristic: deviceChar(d),
+      leakageMA: isRCD(d) ? d.leakageMA : undefined,
+    })
+    if (fullName === '—') continue
+    
+    const simpleName = !isRCD(d) ? d.group : d.protectedGroups.join(', ')
+    const existing = groups.get(fullName)
+    if (existing) {
+      existing.qty++
+    } else {
+      groups.set(fullName, { fullName, qty: 1, modules: d.modules })
+    }
+  }
+
+  return Array.from(groups.values()).map(g => ({
+    name: g.fullName,
+    fullName: g.fullName,
+    qty: g.qty,
+    modules: g.modules,
+  }))
 }
 
 export default function CalculatorResults() {
@@ -172,6 +214,10 @@ export default function CalculatorResults() {
   )
   const layout = generateLayout(devices)
 
+  // Сгруппированная спецификация
+  const specRows = buildSpecRows(devices, manufacturer)
+  const totalQty = specRows.reduce((s, r) => s + r.qty, 0)
+
   return (
     <div className="mx-auto max-w-4xl space-y-8">
       {/* Хидер */}
@@ -186,7 +232,7 @@ export default function CalculatorResults() {
         </div>
         <div className="flex gap-2">
           <button
-            onClick={() => exportToXlsx(devices, mainBreaker, manufacturer)}
+            onClick={() => exportToXlsx(devices, manufacturer)}
             title="Скачать Excel"
             className="no-print inline-flex items-center gap-1.5 rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2 text-xs font-medium text-green-400 transition-colors hover:bg-green-500/20"
           >
@@ -308,91 +354,25 @@ export default function CalculatorResults() {
 
       {/* Спецификация */}
       <div>
-        <h3 className="mb-4 text-lg font-semibold font-display">Спецификация оборудования</h3>
+        <h3 className="mb-4 text-lg font-semibold font-display">
+          Спецификация оборудования ({MANUFACTURER_LABELS[manufacturer]})
+        </h3>
+        <p className="mb-3 text-xs text-text-muted">
+          Всего {totalQty} устройств, {specRows.length} позиций
+        </p>
         <div className="overflow-hidden rounded-xl border border-border">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-bg-elevated border-b border-border">
-                <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">Тип</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">Назначение</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">Номинал</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">Хар-ка</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">Мод.</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">Артикул {MANUFACTURER_LABELS[manufacturer]}</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">Наименование</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-text-muted uppercase w-16">Кол-во</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {/* Вводной */}
-              <tr className="bg-accent-amber/5">
-                <td className="px-4 py-2.5">
-                  <span className="rounded-md border border-accent-amber/30 bg-accent-amber/10 px-2 py-0.5 text-[11px] text-accent-amber">
-                    Ввод
-                  </span>
-                </td>
-                <td className="px-4 py-2.5 font-medium">{mainBreaker.group}</td>
-                <td className="px-4 py-2.5">{mainBreaker.rating}А</td>
-                <td className="px-4 py-2.5">{mainBreaker.characteristic}</td>
-                <td className="px-4 py-2.5">{mainBreaker.modules}</td>
-                <td className="px-4 py-2.5 font-mono text-[11px] text-text-muted">{deviceArticle(mainBreaker, manufacturer)}</td>
-              </tr>
-              {/* УЗО */}
-              {rcds.map((rcd, i) => (
-                <tr key={rcd.id} className="bg-accent-amber/3">
-                  <td className="px-4 py-2.5">
-                    <span className="rounded-md border border-accent-amber/30 bg-accent-amber/10 px-2 py-0.5 text-[11px] text-accent-amber">
-                      УЗО
-                    </span>
-                  </td>
-                  <td className="px-4 py-2.5">{deviceLabel(rcd)}</td>
-                  <td className="px-4 py-2.5">{rcd.ratingAmps}А</td>
-                  <td className="px-4 py-2.5">{rcd.leakageMA}мА</td>
-                  <td className="px-4 py-2.5">{rcd.modules}</td>
-                  <td className="px-4 py-2.5 font-mono text-[11px] text-text-muted">{deviceArticle(rcd, manufacturer)}</td>
-                </tr>
-              ))}
-              {/* Дифы */}
-              {diffDevices.map((diff, i) => (
-                <tr key={diff.id} className="bg-accent-danger/3">
-                  <td className="px-4 py-2.5">
-                    <span className="rounded-md border border-accent-danger/30 bg-accent-danger/10 px-2 py-0.5 text-[11px] text-accent-danger">
-                      Диф
-                    </span>
-                  </td>
-                  <td className="px-4 py-2.5">{deviceLabel(diff)}</td>
-                  <td className="px-4 py-2.5">{diff.ratingAmps}А</td>
-                  <td className="px-4 py-2.5">{diff.leakageMA}мА</td>
-                  <td className="px-4 py-2.5">{diff.modules}</td>
-                  <td className="px-4 py-2.5 font-mono text-[11px] text-text-muted">{deviceArticle(diff, manufacturer)}</td>
-                </tr>
-              ))}
-              {/* Групповые автоматы */}
-              {groupBreakers.map((b, i) => (
-                <tr key={b.id}>
-                  <td className="px-4 py-2.5">
-                    <span className="rounded-md border border-accent-info/30 bg-accent-info/10 px-2 py-0.5 text-[11px] text-accent-info">
-                      Авт
-                    </span>
-                  </td>
-                  <td className="px-4 py-2.5">{b.group}</td>
-                  <td className="px-4 py-2.5">{b.rating}А</td>
-                  <td className="px-4 py-2.5">{b.characteristic}</td>
-                  <td className="px-4 py-2.5">{b.modules}</td>
-                  <td className="px-4 py-2.5 font-mono text-[11px] text-text-muted">{deviceArticle(b, manufacturer)}</td>
-                </tr>
-              ))}
-              {/* Оборудование щитка (без автомата) */}
-              {panelEquipment && panelEquipment.length > 0 && panelEquipment.map(eq => (
-                <tr key={eq.id} className="bg-gray-50 dark:bg-gray-950/10">
-                  <td className="px-4 py-2.5">
-                    <span className="rounded-md border border-gray-300 bg-gray-100 px-2 py-0.5 text-[11px] text-gray-600">
-                      Обор.
-                    </span>
-                  </td>
-                  <td className="px-4 py-2.5 text-text-muted italic">{eq.name}</td>
-                  <td className="px-4 py-2.5 text-text-muted">—</td>
-                  <td className="px-4 py-2.5 text-text-muted">—</td>
-                  <td className="px-4 py-2.5">{eq.modules}</td>
-                  <td className="px-4 py-2.5 text-text-muted">—</td>
+              {specRows.map((row, i) => (
+                <tr key={i}>
+                  <td className="px-4 py-2.5 text-xs">{row.name}</td>
+                  <td className="px-4 py-2.5 text-right font-medium">{row.qty}</td>
                 </tr>
               ))}
             </tbody>

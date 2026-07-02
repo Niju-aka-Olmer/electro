@@ -4,8 +4,8 @@
 import type { CircuitBreaker, RCD, RoomConfig, RoomType } from '@/types/electrical'
 
 /**
- * Комнаты, требующие УЗО 10мА (повышенная опасность)
- * ПУЭ 7.1.83: ванные, душевые — обязательно 10мА
+ * Комнаты, где рекомендуется дифавтомат вместо УЗО+автомат
+ * (компактность + защита)
  */
 const HIGH_RISK_ROOMS: RoomType[] = ['bathroom', 'toilet']
 
@@ -25,11 +25,10 @@ export function shouldUseDiffBreaker(room: RoomConfig): boolean {
 
 /**
  * Требуемый ток утечки УЗО для комнаты
- * ПУЭ 7.1.83: влажные помещения → 10мА
- * Общие помещения → 30мА
+ * Стандарт для всех жилых помещений → 30мА
  */
-export function getRequiredLeakage(room: RoomConfig): 10 | 30 {
-  return HIGH_RISK_ROOMS.includes(room.type) ? 10 : 30
+export function getRequiredLeakage(_room: RoomConfig): 10 | 30 {
+  return 30
 }
 
 /**
@@ -141,14 +140,9 @@ export function generateRCDStrategy(
       result.push(createDiffBreaker(
         `diff_${room.id}_floor`,
         Math.min(floorRating, 16) as 10 | 25 | 40 | 63,
-        10,
+        30,
         `${room.name} (тёплый пол)`,
-        `Дифавтомат ${Math.min(floorRating, 16)}А/10мА на тёплый пол в ${room.name}.\n` +
-        `ПУЭ 7.1.84: нагревательные кабели/маты во влажных зонах — отдельная линия с УЗО 10мА.\n` +
-        `Альтернатива (ГОСТ Р 50571.7.701): при наличии ДСУП (доп. уравнивание потенциалов) ` +
-        `и экранированного кабеля — допускается УЗО 30мА, если ток утечки <0.3мА/А нагрузки. ` +
-        `Для 6-10А это <3мА, что значительно ниже 10мА — вариант возможен, ` +
-        `но ПУЭ 7.1.83-84 предписывает 10мА в мокрых зонах.`
+        `Дифавтомат ${Math.min(floorRating, 16)}А/30мА на тёплый пол в ${room.name}.`
       ))
     }
 
@@ -160,9 +154,9 @@ export function generateRCDStrategy(
         result.push(createDiffBreaker(
           `diff_${room.id}_power`,
           Math.min(maxRating, 25) as 10 | 25 | 40 | 63,
-          10,
+          30,
           `${room.name} (розетки/техника)`,
-          `Дифавтомат ${Math.min(maxRating, 25)}А/10мА на розетки и технику в ${room.name}. ` +
+          `Дифавтомат ${Math.min(maxRating, 25)}А/30мА на розетки и технику в ${room.name}. ` +
           `Отдельный диф — при срабатывании свет продолжает гореть (ПУЭ 7.1.83).`
         ))
       }
@@ -190,9 +184,9 @@ export function generateRCDStrategy(
       result.push(createDiffBreaker(
         `diff_${room.id}`,
         diffRating,
-        10,
+        30,
         room.name,
-        `Дифавтомат ${diffRating}А/10мА в ${room.name} — защищает все линии, кроме тёплого пола. ` +
+        `Дифавтомат ${diffRating}А/30мА в ${room.name} — защищает все линии, кроме тёплого пола. ` +
         `Эконом-вариант: один диф на розетки, свет и технику. ` +
         `При срабатывании всё помещение обесточивается (кроме тёплого пола), ПУЭ 7.1.83.`
       ))
@@ -229,10 +223,10 @@ export function generateRCDStrategy(
       result.push(createDiffBreaker(
         `diff_${breaker.id}`,
         Math.min(breaker.rating, 25) as 10 | 25 | 40 | 63,
-        10,
+        30,
         `${roomName} (${label})`,
         `Индивидуальный дифавтомат на ${label} в ${roomName}. ` +
-        `Прибор связан с водой — УЗО 10мА (ПУЭ 7.1.83).`
+        `Прибор связан с водой — УЗО 30мА.`
       ))
     }
     return result
@@ -256,18 +250,8 @@ export function generateRCDStrategy(
     const WATER_RELATED = ['dishwasher', 'washer', 'boiler', 'water_heater']
 
     return roomBreakers.map(breaker => {
-      // Определяем ток утечки
-      let leakage: 10 | 30 = 30
-      const isWaterRelated = WATER_RELATED.some(id => breaker.id.includes(id))
-
-      if (isWetRoom) {
-        // Влажное помещение: розетки/приборы/тёплый пол — 10мА, освещение — 30мА (Роспотребнадзор)
-        leakage = breaker.id.includes('light') ? 30 : 10
-      } else if (isWaterRelated) {
-        leakage = 10 // прибор связан с водой — 10мА
-      } else if (breaker.id.includes('electric_floor') && isWetRoom) {
-        leakage = 10 // тёплый пол в мокрой зоне — 10мА
-      }
+      // Определяем ток утечки — всегда 30мА
+      const leakage: 10 | 30 = 30
 
       // Формируем читаемое имя группы
       let groupName = room.name
@@ -304,10 +288,10 @@ export function generateRCDStrategy(
         `Индивидуальный дифавтомат ${diffRating}А/${leakage}мА на "${groupName}".`
       ]
       if (isWetRoom) {
-        reasons.push(`Влажное помещение — УЗО 10мА (ПУЭ 7.1.83).`)
+        reasons.push(`Влажное помещение — УЗО 30мА.`)
       }
-      if (isWaterRelated) {
-        reasons.push(`Прибор связан с водой — УЗО 10мА (ПУЭ 7.1.83).`)
+      if (WATER_RELATED.some(id => breaker.id.includes(id))) {
+        reasons.push(`Прибор связан с водой — УЗО 30мА.`)
       }
       reasons.push(`Максимальная селективность: при срабатывании отключается только одна линия.`)
 
@@ -331,8 +315,7 @@ export function generateRCDStrategy(
       explanation:
         `Выбрана максимальная схема защиты «Всё раздельно»: индивидуальный дифавтомат на КАЖДУЮ линию. ` +
         `Всего ${allDiffs.length} дифавтоматов. ` +
-        `Влажные помещения — УЗО 10мА (ПУЭ 7.1.83). Приборы, связанные с водой (стиральная, ` +
-        `посудомоечная, водонагреватель) — УЗО 10мА независимо от помещения. ` +
+        `Все УЗО — 30мА (стандарт для жилых помещений). ` +
         `Преимущество: при срабатывании отключается ТОЛЬКО одна линия — остальные продолжают работать. ` +
         `Недостаток: больше дифавтоматов = больше места в щитке.`
     }
@@ -363,7 +346,7 @@ export function generateRCDStrategy(
       : `отдельные дифавтоматы на розетки и на свет в каждом влажном помещении`
 
     const extraSeparate = waterRelatedDiffs.length > 0
-      ? `\nДополнительно: индивидуальные дифавтоматы 10мА на водозависимые приборы (стиральная, посудомоечная, водонагреватель).`
+      ? `\nДополнительно: индивидуальные дифавтоматы 30мА на водозависимые приборы (стиральная, посудомоечная, водонагреватель).`
       : ``
 
     return {
@@ -436,7 +419,7 @@ export function generateRCDStrategy(
     : `отдельные дифавтоматы на розетки и на свет`
 
   const extraSeparate = waterRelatedDiffs.length > 0 && bathroomStrategy === 'separate'
-    ? `\nДополнительно: индивидуальные дифавтоматы 10мА на водозависимые приборы (стиральная, посудомоечная, водонагреватель).`
+    ? `\nДополнительно: индивидуальные дифавтоматы 30мА на водозависимые приборы (стиральная, посудомоечная, водонагреватель).`
     : ``
 
   return {

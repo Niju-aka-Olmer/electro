@@ -5,12 +5,27 @@ export type Manufacturer = 'abb' | 'dekraft'
 
 interface CatalogEntry {
   abb: string
+  abbName: string   // полное название ABB
   dekraft: string
+  dekraftName: string // полное название Dekraft
 }
 
 /**
  * Поиск артикула по параметрам устройства.
- * Возвращает артикул для выбранного производителя.
+ */
+function findEntry(params: {
+  type: string
+  poles: number
+  rating: number
+  characteristic?: string
+  leakageMA?: number
+}): CatalogEntry | undefined {
+  const key = buildKey(params)
+  return CATALOG[key]
+}
+
+/**
+ * Получить артикул для выбранного производителя.
  */
 export function getArticle(
   manufacturer: Manufacturer,
@@ -22,10 +37,36 @@ export function getArticle(
     leakageMA?: number
   }
 ): string {
-  const key = buildKey(params)
-  const entry = CATALOG[key]
+  const entry = findEntry(params)
   if (!entry) return '—'
   return entry[manufacturer]
+}
+
+/**
+ * Получить полное название устройства с артикулом.
+ * Пример: «УЗО ABB F202 A-63/0.03 63А 30mA (2CSF202101R1630)»
+ */
+export function getFullName(
+  manufacturer: Manufacturer,
+  params: {
+    type: 'main_breaker' | 'circuit_breaker' | 'rcd' | 'diff_breaker' | 'load_break_switch'
+    poles: number
+    rating: number
+    characteristic?: string
+    leakageMA?: number
+  }
+): string {
+  const entry = findEntry(params)
+  if (!entry) return `—`
+  const name = entry[`${manufacturer}Name` as 'abbName' | 'dekraftName']
+  const article = entry[manufacturer]
+  return `${name} (${article})`
+}
+
+/** Названия производителей */
+export const MANUFACTURER_LABELS: Record<Manufacturer, string> = {
+  abb: 'ABB',
+  dekraft: 'Dekraft',
 }
 
 function buildKey(p: {
@@ -46,197 +87,248 @@ function buildKey(p: {
 // ═══════════════════════════════════════════════════════════════
 
 const CATALOG: Record<string, CatalogEntry> = {
-  // ── Вводные автоматы (2P/3P, B, ABB SH200 / Dekraft VA47-29) ──
+
+  // ── Вводные автоматы 2P B (ABB S202 / Dekraft ВА-101) ──
   'main_breaker_2P_25A_B': {
     abb: '2CDS252001R0255',
-    dekraft: 'VA47-29 2P 25A B',
+    abbName: 'Автоматический выключатель ABB 2-полюсный S202 B25',
+    dekraft: '11060DEK',
+    dekraftName: 'Автоматический выключатель Dekraft 2P ВА-101 B25 4.5кА',
   },
   'main_breaker_2P_32A_B': {
     abb: '2CDS252001R0325',
-    dekraft: 'VA47-29 2P 32A B',
+    abbName: 'Автоматический выключатель ABB 2-полюсный S202 B32',
+    dekraft: '11061DEK',
+    dekraftName: 'Автоматический выключатель Dekraft 2P ВА-101 B32 4.5кА',
   },
   'main_breaker_2P_40A_B': {
     abb: '2CDS252001R0405',
-    dekraft: 'VA47-29 2P 40A B',
+    abbName: 'Автоматический выключатель ABB 2-полюсный S202 B40',
+    dekraft: '11062DEK',
+    dekraftName: 'Автоматический выключатель Dekraft 2P ВА-101 B40 4.5кА',
   },
   'main_breaker_2P_50A_B': {
     abb: '2CDS252001R0505',
-    dekraft: 'VA47-29 2P 50A B',
+    abbName: 'Автоматический выключатель ABB 2-полюсный S202 B50',
+    dekraft: '11063DEK',
+    dekraftName: 'Автоматический выключатель Dekraft 2P ВА-101 B50 4.5кА',
   },
   'main_breaker_2P_63A_B': {
     abb: '2CDS252001R0635',
-    dekraft: 'VA47-29 2P 63A B',
+    abbName: 'Автоматический выключатель ABB 2-полюсный S202 B63',
+    dekraft: '11072DEK',
+    dekraftName: 'Автоматический выключатель Dekraft 2P ВА-101 B63 4.5кА',
   },
+
+  // ── Вводные автоматы 3P B ──
   'main_breaker_3P_25A_B': {
     abb: '2CDS253001R0255',
-    dekraft: 'VA47-29 3P 25A B',
+    abbName: 'Автоматический выключатель ABB 3-полюсный S203 B25',
+    dekraft: '11078DEK',
+    dekraftName: 'Автоматический выключатель Dekraft 3P ВА-101 B25 4.5кА',
   },
   'main_breaker_3P_32A_B': {
     abb: '2CDS253001R0325',
-    dekraft: 'VA47-29 3P 32A B',
+    abbName: 'Автоматический выключатель ABB 3-полюсный S203 B32',
+    dekraft: '11079DEK',
+    dekraftName: 'Автоматический выключатель Dekraft 3P ВА-101 B32 4.5кА',
   },
   'main_breaker_3P_40A_B': {
     abb: '2CDS253001R0405',
-    dekraft: 'VA47-29 3P 40A B',
+    abbName: 'Автоматический выключатель ABB 3-полюсный S203 B40',
+    dekraft: '11080DEK',
+    dekraftName: 'Автоматический выключатель Dekraft 3P ВА-101 B40 4.5кА',
   },
   'main_breaker_3P_50A_B': {
     abb: '2CDS253001R0505',
-    dekraft: 'VA47-29 3P 50A B',
+    abbName: 'Автоматический выключатель ABB 3-полюсный S203 B50',
+    dekraft: '11081DEK',
+    dekraftName: 'Автоматический выключатель Dekraft 3P ВА-101 B50 4.5кА',
   },
   'main_breaker_3P_63A_B': {
     abb: '2CDS253001R0635',
-    dekraft: 'VA47-29 3P 63A B',
+    abbName: 'Автоматический выключатель ABB 3-полюсный S203 B63',
+    dekraft: '11082DEK',
+    dekraftName: 'Автоматический выключатель Dekraft 3P ВА-101 B63 4.5кА',
   },
 
-  // ── Групповые автоматы (1P, C, ABB S201 / Dekraft VA47-29) ──
+  // ── Групповые автоматы 1P C (ABB SH201 / Dekraft ВА-101) ──
   'circuit_breaker_1P_6A_C': {
-    abb: '2CDS251001R0064',
-    dekraft: 'VA47-29 1P 6A C',
+    abb: '2CDS211001R0064',
+    abbName: 'Автомат ABB SH201 C6 6A (C) 6kA',
+    dekraft: '11051DEK',
+    dekraftName: 'Автоматический выключатель Dekraft 1P ВА-101 C6 4.5кА',
   },
   'circuit_breaker_1P_10A_C': {
-    abb: '2CDS251001R0104',
-    dekraft: 'VA47-29 1P 10A C',
+    abb: '2CDS211001R0104',
+    abbName: 'Автомат ABB SH201 C10 10A (C) 6kA',
+    dekraft: '11053DEK',
+    dekraftName: 'Автоматический выключатель Dekraft 1P ВА-101 C10 4.5кА',
   },
   'circuit_breaker_1P_16A_C': {
-    abb: '2CDS251001R0164',
-    dekraft: 'VA47-29 1P 16A C',
+    abb: '2CDS211001R0164',
+    abbName: 'Автомат ABB SH201 C16 16A (C) 6kA',
+    dekraft: '11054DEK',
+    dekraftName: 'Автоматический выключатель Dekraft 1P ВА-101 C16 4.5кА',
   },
   'circuit_breaker_1P_20A_C': {
-    abb: '2CDS251001R0204',
-    dekraft: 'VA47-29 1P 20A C',
+    abb: '2CDS211001R0204',
+    abbName: 'Автомат ABB SH201 C20 20A (C) 6kA',
+    dekraft: '11055DEK',
+    dekraftName: 'Автоматический выключатель Dekraft 1P ВА-101 C20 4.5кА',
   },
   'circuit_breaker_1P_25A_C': {
-    abb: '2CDS251001R0254',
-    dekraft: 'VA47-29 1P 25A C',
+    abb: '2CDS211001R0254',
+    abbName: 'Автомат ABB SH201 C25 25A (C) 6kA',
+    dekraft: '11056DEK',
+    dekraftName: 'Автоматический выключатель Dekraft 1P ВА-101 C25 4.5кА',
   },
   'circuit_breaker_1P_32A_C': {
-    abb: '2CDS251001R0324',
-    dekraft: 'VA47-29 1P 32A C',
+    abb: '2CDS211001R0324',
+    abbName: 'Автомат ABB SH201 C32 32A (C) 6kA',
+    dekraft: '11057DEK',
+    dekraftName: 'Автоматический выключатель Dekraft 1P ВА-101 C32 4.5кА',
   },
   'circuit_breaker_1P_40A_C': {
-    abb: '2CDS251001R0404',
-    dekraft: 'VA47-29 1P 40A C',
+    abb: '2CDS211001R0404',
+    abbName: 'Автомат ABB SH201 C40 40A (C) 6kA',
+    dekraft: '11058DEK',
+    dekraftName: 'Автоматический выключатель Dekraft 1P ВА-101 C40 4.5кА',
   },
 
-  // ── Групповые автоматы (1P, B, для освещения) ──
+  // ── Групповые автоматы 1P B (освещение) ──
   'circuit_breaker_1P_10A_B': {
-    abb: '2CDS251001R0105',
-    dekraft: 'VA47-29 1P 10A B',
+    abb: '2CDS211001R0105',
+    abbName: 'Автомат ABB SH201 B10 10A (B) 6kA',
+    dekraft: '11031DEK',
+    dekraftName: 'Автоматический выключатель Dekraft 1P ВА-101 B10 4.5кА',
   },
 
-  // ── 2P автоматы (мощные нагрузки) ──
+  // ── 2P автоматы C (мощные нагрузки) ──
   'circuit_breaker_2P_25A_C': {
-    abb: '2CDS252001R0254',
-    dekraft: 'VA47-29 2P 25A C',
+    abb: '2CDS212001R0254',
+    abbName: 'Автоматический выключатель ABB 2-полюсный S202 C25',
+    dekraft: '11068DEK',
+    dekraftName: 'Автоматический выключатель Dekraft 2P ВА-101 C25 4.5кА',
   },
   'circuit_breaker_2P_32A_C': {
-    abb: '2CDS252001R0324',
-    dekraft: 'VA47-29 2P 32A C',
+    abb: '2CDS212001R0324',
+    abbName: 'Автоматический выключатель ABB 2-полюсный S202 C32',
+    dekraft: '11069DEK',
+    dekraftName: 'Автоматический выключатель Dekraft 2P ВА-101 C32 4.5кА',
   },
 
-  // ── УЗО (2P, ABB F202 / Dekraft VD1-63) ──
+  // ── УЗО 30мА (ABB F202 / Dekraft ВДТ) ──
   'rcd_2P_25A_30mA': {
-    abb: '2CSF202001R1250',
-    dekraft: 'VD1-63 2P 25A 30mA',
+    abb: '2CSF202101R1250',
+    abbName: 'УЗО ABB F202 A-25/0.03 25А 30mA (А)',
+    dekraft: '14207DEK',
+    dekraftName: 'УЗО Dekraft 2P ВДТ 25A 30mA',
   },
   'rcd_2P_40A_30mA': {
-    abb: '2CSF202001R1400',
-    dekraft: 'VD1-63 2P 40A 30mA',
+    abb: '2CSF202101R1400',
+    abbName: 'УЗО ABB F202 A-40/0.03 40А 30mA (А)',
+    dekraft: '14208DEK',
+    dekraftName: 'УЗО Dekraft 2P ВДТ 40A 30mA',
   },
   'rcd_2P_63A_30mA': {
-    abb: '2CSF202001R1630',
-    dekraft: 'VD1-63 2P 63A 30mA',
+    abb: '2CSF202101R1630',
+    abbName: 'УЗО ABB F202 A-63/0.03 63А 30mA (А)',
+    dekraft: '14209DEK',
+    dekraftName: 'УЗО Dekraft 2P ВДТ 63A 30mA',
   },
 
-  // ── Дифавтоматы 30мА (ABB DS201 / Dekraft AVDT-63) ──
+  // ── Дифавтоматы (ABB DSH201R / Dekraft ДИФ-103) ──
   'diff_breaker_2P_6A_30mA': {
-    abb: '2CSF202001R1060',
-    dekraft: 'AVDT-63 1P+N 6A 30mA',
+    abb: '2CSR245072R1064',
+    abbName: 'DSH201R C6 30mA Дифференциальный автомат ABB 2-полюсный 6A 30mA тип АС',
+    dekraft: '16586DEK',
+    dekraftName: 'АВДТ Dekraft ДИФ-103 1P+N C6 30mA AC 4.5kA',
   },
   'diff_breaker_2P_10A_30mA': {
-    abb: '2CSF202001R1100',
-    dekraft: 'AVDT-63 1P+N 10A 30mA',
+    abb: '2CSR245072R1104',
+    abbName: 'DSH201R C10 30mA Дифференциальный автомат ABB 2-полюсный 10A 30mA тип АС',
+    dekraft: '16587DEK',
+    dekraftName: 'АВДТ Dekraft ДИФ-103 1P+N C10 30mA AC 4.5kA',
   },
   'diff_breaker_2P_16A_30mA': {
-    abb: '2CSF202001R1160',
-    dekraft: 'AVDT-63 1P+N 16A 30mA',
+    abb: '2CSR245072R1164',
+    abbName: 'DSH201R C16 30mA Дифференциальный автомат ABB 2-полюсный 16A 30mA тип АС',
+    dekraft: '16588DEK',
+    dekraftName: 'АВДТ Dekraft ДИФ-103 1P+N C16 30mA AC 4.5kA',
   },
   'diff_breaker_2P_20A_30mA': {
-    abb: '2CSF202001R1200',
-    dekraft: 'AVDT-63 1P+N 20A 30mA',
+    abb: '2CSR245072R1204',
+    abbName: 'DSH201R C20 30mA Дифференциальный автомат ABB 2-полюсный 20A 30mA тип АС',
+    dekraft: '16589DEK',
+    dekraftName: 'АВДТ Dekraft ДИФ-103 1P+N C20 30mA AC 4.5kA',
   },
   'diff_breaker_2P_25A_30mA': {
-    abb: '2CSF202001R1250',
-    dekraft: 'AVDT-63 1P+N 25A 30mA',
+    abb: '2CSR245072R1254',
+    abbName: 'DSH201R C25 30mA Дифференциальный автомат ABB 2-полюсный 25A 30mA тип АС',
+    dekraft: '16590DEK',
+    dekraftName: 'АВДТ Dekraft ДИФ-103 1P+N C25 30mA AC 4.5kA',
   },
 
-  // ── Дифавтоматы 10мА (влажные помещения, ABB DS201 / Dekraft AVDT-63) ──
-  'diff_breaker_2P_6A_10mA': {
-    abb: '2CSF202001R2060',
-    dekraft: 'AVDT-63 1P+N 6A 10mA',
-  },
-  'diff_breaker_2P_10A_10mA': {
-    abb: '2CSF202001R2100',
-    dekraft: 'AVDT-63 1P+N 10A 10mA',
-  },
-  'diff_breaker_2P_16A_10mA': {
-    abb: '2CSF202001R2160',
-    dekraft: 'AVDT-63 1P+N 16A 10mA',
-  },
-  'diff_breaker_2P_20A_10mA': {
-    abb: '2CSF202001R2200',
-    dekraft: 'AVDT-63 1P+N 20A 10mA',
-  },
-  'diff_breaker_2P_25A_10mA': {
-    abb: '2CSF202001R2250',
-    dekraft: 'AVDT-63 1P+N 25A 10mA',
-  },
-
-  // ── Выключатель нагрузки / рубильник ──
+  // ── Выключатель нагрузки / рубильник (ABB S200 / Dekraft ВН) ──
   'load_break_switch_2P_25A': {
     abb: '2CDS212001R0254',
-    dekraft: 'VN-29 2P 25A',
+    abbName: 'Выключатель нагрузки ABB 2P S202 25A',
+    dekraft: '12030DEK',
+    dekraftName: 'Выключатель нагрузки Dekraft 2P ВН-29 25A',
   },
   'load_break_switch_2P_32A': {
     abb: '2CDS212001R0324',
-    dekraft: 'VN-29 2P 32A',
+    abbName: 'Выключатель нагрузки ABB 2P S202 32A',
+    dekraft: '12031DEK',
+    dekraftName: 'Выключатель нагрузки Dekraft 2P ВН-29 32A',
   },
   'load_break_switch_2P_40A': {
     abb: '2CDS212001R0404',
-    dekraft: 'VN-29 2P 40A',
+    abbName: 'Выключатель нагрузки ABB 2P S202 40A',
+    dekraft: '12032DEK',
+    dekraftName: 'Выключатель нагрузки Dekraft 2P ВН-29 40A',
   },
   'load_break_switch_2P_50A': {
     abb: '2CDS212001R0504',
-    dekraft: 'VN-29 2P 50A',
+    abbName: 'Выключатель нагрузки ABB 2P S202 50A',
+    dekraft: '12033DEK',
+    dekraftName: 'Выключатель нагрузки Dekraft 2P ВН-29 50A',
   },
   'load_break_switch_2P_63A': {
     abb: '2CDS212001R0634',
-    dekraft: 'VN-29 2P 63A',
+    abbName: 'Выключатель нагрузки ABB 2P S202 63A',
+    dekraft: '12034DEK',
+    dekraftName: 'Выключатель нагрузки Dekraft 2P ВН-29 63A',
   },
   'load_break_switch_4P_25A': {
     abb: '2CDS214001R0254',
-    dekraft: 'VN-29 4P 25A',
+    abbName: 'Выключатель нагрузки ABB 4P S204 25A',
+    dekraft: '12050DEK',
+    dekraftName: 'Выключатель нагрузки Dekraft 4P ВН-29 25A',
   },
   'load_break_switch_4P_32A': {
     abb: '2CDS214001R0324',
-    dekraft: 'VN-29 4P 32A',
+    abbName: 'Выключатель нагрузки ABB 4P S204 32A',
+    dekraft: '12051DEK',
+    dekraftName: 'Выключатель нагрузки Dekraft 4P ВН-29 32A',
   },
   'load_break_switch_4P_40A': {
     abb: '2CDS214001R0404',
-    dekraft: 'VN-29 4P 40A',
+    abbName: 'Выключатель нагрузки ABB 4P S204 40A',
+    dekraft: '12052DEK',
+    dekraftName: 'Выключатель нагрузки Dekraft 4P ВН-29 40A',
   },
   'load_break_switch_4P_50A': {
     abb: '2CDS214001R0504',
-    dekraft: 'VN-29 4P 50A',
+    abbName: 'Выключатель нагрузки ABB 4P S204 50A',
+    dekraft: '12053DEK',
+    dekraftName: 'Выключатель нагрузки Dekraft 4P ВН-29 50A',
   },
   'load_break_switch_4P_63A': {
     abb: '2CDS214001R0634',
-    dekraft: 'VN-29 4P 63A',
+    abbName: 'Выключатель нагрузки ABB 4P S204 63A',
+    dekraft: '12054DEK',
+    dekraftName: 'Выключатель нагрузки Dekraft 4P ВН-29 63A',
   },
-}
-
-/** Локализованные названия производителей */
-export const MANUFACTURER_LABELS: Record<Manufacturer, string> = {
-  abb: 'ABB',
-  dekraft: 'Dekraft',
 }
