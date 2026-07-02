@@ -48,13 +48,13 @@ export function calcMainBreaker(input: CalculationInput): CircuitBreaker {
     id: 'main',
     type: 'main_breaker',
     rating: input.meterAmps,
-    characteristic: 'C',
+    characteristic: 'B',
     poles: is3Phase ? 3 : 2,   // 3 фазы → 3P, 1 фаза → 2P (L+N)
     modules: is3Phase ? 3 : 2,
     group: 'Вводной',
     reason: `Номинал ${input.meterAmps}А, ${is3Phase ? '3-полюсный (L1+L2+L3)' : '2-полюсный (L+N)'}. `
       + `${is3Phase ? 'Трёхфазный ввод' : 'Однофазный ввод'} 220В. `
-      + `Характеристика C — для смешанных нагрузок (ПУЭ 3.1.8).`
+      + `Характеристика B — требование Роспотребнадзора для вводных автоматов в жилых помещениях. `
   }
 }
 

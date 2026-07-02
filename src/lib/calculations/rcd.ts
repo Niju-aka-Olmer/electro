@@ -172,10 +172,10 @@ export function generateRCDStrategy(
         result.push(createDiffBreaker(
           `diff_${room.id}_light`,
           Math.min(maxLightRating, 25) as 10 | 25 | 40 | 63,
-          10,
+          30,
           `${room.name} (освещение)`,
-          `Дифавтомат ${Math.min(maxLightRating, 25)}А/10мА на освещение в ${room.name}. ` +
-          `Отдельный диф — при срабатывании розеток свет остаётся включённым (ПУЭ 7.1.83).`
+          `Дифавтомат ${Math.min(maxLightRating, 25)}А/30мА на освещение в ${room.name}. ` +
+          `Освещение — 30мА (Роспотребнадзор). Отдельный диф — при срабатывании розеток свет остаётся включённым.`
         ))
       }
 
@@ -261,7 +261,8 @@ export function generateRCDStrategy(
       const isWaterRelated = WATER_RELATED.some(id => breaker.id.includes(id))
 
       if (isWetRoom) {
-        leakage = 10 // влажное помещение — всегда 10мА
+        // Влажное помещение: розетки/приборы/тёплый пол — 10мА, освещение — 30мА (Роспотребнадзор)
+        leakage = breaker.id.includes('light') ? 30 : 10
       } else if (isWaterRelated) {
         leakage = 10 // прибор связан с водой — 10мА
       } else if (breaker.id.includes('electric_floor') && isWetRoom) {

@@ -5,6 +5,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { CalculationInput, CalculationResult, RoomConfig } from '@/types/electrical'
 import { calculateAll } from '@/lib/calculate'
+import type { Manufacturer } from '@/lib/catalog'
 
 interface CalculatorStore {
   // Входные данные
@@ -17,6 +18,10 @@ interface CalculatorStore {
   currentStep: 1 | 2 | 3
   isCalculating: boolean
   error: string | null
+
+  // Выбор производителя
+  manufacturer: Manufacturer
+  setManufacturer: (m: Manufacturer) => void
 
   // Actions
   setInput: (input: Partial<CalculationInput>) => void
@@ -50,6 +55,9 @@ export const useCalculatorStore = create<CalculatorStore>()(
       currentStep: 1,
       isCalculating: false,
       error: null,
+      manufacturer: 'abb',
+
+      setManufacturer: (manufacturer) => set({ manufacturer }),
 
       setInput: (updates) =>
         set((state) => ({ input: { ...state.input, ...updates } })),
@@ -106,6 +114,7 @@ export const useCalculatorStore = create<CalculatorStore>()(
           currentStep: 1,
           isCalculating: false,
           error: null,
+          manufacturer: 'abb',
         }),
     }),
     {

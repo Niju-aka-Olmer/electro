@@ -4,6 +4,7 @@ import { useCalculatorStore } from '@/store/calculatorStore'
 import Link from 'next/link'
 import type { CircuitBreaker, RCD } from '@/types/electrical'
 import { cn } from '@/lib/utils'
+import { getArticle, MANUFACTURER_LABELS, type Manufacturer } from '@/lib/catalog'
 
 function isRCD(d: CircuitBreaker | RCD): d is RCD {
   return 'leakageMA' in d
@@ -13,6 +14,35 @@ function deviceLabel(d: CircuitBreaker | RCD): string {
   if (!isRCD(d)) return d.group
   if (d.type === 'diff_breaker') return `${d.protectedGroups.join(', ')} (Диф ${d.ratingAmps}А/${d.leakageMA}мА)`
   return `${d.protectedGroups.join(', ')} (УЗО ${d.ratingAmps}А/${d.leakageMA}мА)`
+}
+
+/** Тип устройства для каталога */
+function deviceType(d: CircuitBreaker | RCD): string {
+  if (!isRCD(d)) return d.type
+  if (d.type === 'diff_breaker') return 'diff_breaker'
+  return 'rcd'
+}
+
+/** Характеристика для каталога (УЗО/дифы передают ток утечки) */
+function deviceChar(d: CircuitBreaker | RCD): string | undefined {
+  if (!isRCD(d)) return d.characteristic
+  return undefined
+}
+
+function deviceRating(d: CircuitBreaker | RCD): number {
+  if (!isRCD(d)) return d.rating
+  return d.ratingAmps
+}
+
+/** Получить артикул устройства */
+function deviceArticle(d: CircuitBreaker | RCD, manufacturer: Manufacturer): string {
+  return getArticle(manufacturer, {
+    type: deviceType(d) as 'main_breaker' | 'circuit_breaker' | 'rcd' | 'diff_breaker' | 'load_break_switch',
+    poles: d.poles,
+    rating: deviceRating(d),
+    characteristic: deviceChar(d),
+    leakageMA: isRCD(d) ? d.leakageMA : undefined,
+  })
 }
 
 /** Генерация раскладки по DIN-рейкам (12 модулей на рейку) */
@@ -59,8 +89,76 @@ function deviceTag(d: CircuitBreaker | RCD): { label: string; color: string } {
   return { label: 'УЗО', color: 'border-accent-amber/30 bg-accent-amber/10 text-accent-amber' }
 }
 
+/** Тип устройства строкой */
+function deviceTypeLabel(d: CircuitBreaker | RCD): string {
+  if (!isRCD(d)) {
+    if (d.type === 'main_breaker') return 'Ввод'
+    return 'Авт'
+  }
+  if (d.type === 'diff_breaker') return 'Диф'
+  return 'УЗО'
+}
+
+/** Номинал строкой */
+function deviceRatingLabel(d: CircuitBreaker | RCD): string {
+  if (!isRCD(d)) return `${d.rating}А`
+  return `${d.ratingAmps}А`
+}
+
+/** Характеристика строкой */
+function deviceCharLabel(d: CircuitBreaker | RCD): string {
+  if (!isRCD(d)) return d.characteristic
+  return `${d.leakageMA}мА`
+}
+
+/** Модули */
+function deviceModules(d: CircuitBreaker | RCD): number {
+  return d.modules
+}
+
+/** Экспорт спецификации в XLSX */
+async function exportToXlsx(
+  devices: (CircuitBreaker | RCD)[],
+  mainBreaker: CircuitBreaker,
+  manufacturer: Manufacturer
+) {
+  const XLSX = await import('xlsx')
+  
+  const rows: Record<string, string | number>[] = []
+  
+  for (const d of devices) {
+    const article = deviceArticle(d, manufacturer)
+    rows.push({
+      'Тип': deviceTypeLabel(d),
+      'Назначение': !isRCD(d) ? d.group : d.protectedGroups.join(', '),
+      'Номинал': deviceRatingLabel(d),
+      'Хар-ка': deviceCharLabel(d),
+      'Мод.': deviceModules(d),
+      'Артикул': article,
+    })
+  }
+
+  const ws = XLSX.utils.json_to_sheet(rows)
+  
+  // Ширина колонок
+  ws['!cols'] = [
+    { wch: 8 },
+    { wch: 45 },
+    { wch: 10 },
+    { wch: 10 },
+    { wch: 6 },
+    { wch: 28 },
+  ]
+
+  const wb = XLSX.utils.book_new()
+  const brand = MANUFACTURER_LABELS[manufacturer]
+  XLSX.utils.book_append_sheet(wb, ws, `${brand}`)
+  
+  XLSX.writeFile(wb, `electroplan-${brand.toLowerCase()}.xlsx`)
+}
+
 export default function CalculatorResults() {
-  const { result, input, setStep, reset } = useCalculatorStore()
+  const { result, input, setStep, reset, manufacturer, setManufacturer } = useCalculatorStore()
   const rooms = input.rooms ?? []
 
   if (!result) return null
@@ -87,6 +185,16 @@ export default function CalculatorResults() {
           </p>
         </div>
         <div className="flex gap-2">
+          <button
+            onClick={() => exportToXlsx(devices, mainBreaker, manufacturer)}
+            title="Скачать Excel"
+            className="no-print inline-flex items-center gap-1.5 rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2 text-xs font-medium text-green-400 transition-colors hover:bg-green-500/20"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Excel
+          </button>
           <button
             onClick={() => window.print()}
             title="Распечатать"
@@ -115,6 +223,25 @@ export default function CalculatorResults() {
             Перенести в Щиток →
           </Link>
         </div>
+      </div>
+
+      {/* Выбор производителя */}
+      <div className="flex items-center gap-3 rounded-xl border border-border bg-bg-elevated p-3 no-print">
+        <span className="text-xs font-medium text-text-secondary">Производитель:</span>
+        {(Object.entries(MANUFACTURER_LABELS) as [Manufacturer, string][]).map(([key, label]) => (
+          <button
+            key={key}
+            onClick={() => setManufacturer(key)}
+            className={cn(
+              'rounded-lg border px-4 py-1.5 text-xs font-medium transition-all',
+              manufacturer === key
+                ? 'border-accent-amber bg-accent-amber/10 text-accent-amber'
+                : 'border-border bg-bg-surface text-text-muted hover:border-border-accent'
+            )}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       {/* Итого */}
@@ -164,7 +291,6 @@ export default function CalculatorResults() {
               if (line.startsWith('## ')) {
                 return <h4 key={i} className="mt-4 mb-2 text-base font-semibold text-text-primary">{line.replace('## ', '')}</h4>
               }
-              // Рендерим **жирный текст**
               const parts = line.split(/(\*\*[^*]+\*\*)/g)
               return (
                 <p key={i}>
@@ -192,6 +318,7 @@ export default function CalculatorResults() {
                 <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">Номинал</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">Хар-ка</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">Мод.</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">Артикул {MANUFACTURER_LABELS[manufacturer]}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -206,6 +333,7 @@ export default function CalculatorResults() {
                 <td className="px-4 py-2.5">{mainBreaker.rating}А</td>
                 <td className="px-4 py-2.5">{mainBreaker.characteristic}</td>
                 <td className="px-4 py-2.5">{mainBreaker.modules}</td>
+                <td className="px-4 py-2.5 font-mono text-[11px] text-text-muted">{deviceArticle(mainBreaker, manufacturer)}</td>
               </tr>
               {/* УЗО */}
               {rcds.map((rcd, i) => (
@@ -219,6 +347,7 @@ export default function CalculatorResults() {
                   <td className="px-4 py-2.5">{rcd.ratingAmps}А</td>
                   <td className="px-4 py-2.5">{rcd.leakageMA}мА</td>
                   <td className="px-4 py-2.5">{rcd.modules}</td>
+                  <td className="px-4 py-2.5 font-mono text-[11px] text-text-muted">{deviceArticle(rcd, manufacturer)}</td>
                 </tr>
               ))}
               {/* Дифы */}
@@ -233,6 +362,7 @@ export default function CalculatorResults() {
                   <td className="px-4 py-2.5">{diff.ratingAmps}А</td>
                   <td className="px-4 py-2.5">{diff.leakageMA}мА</td>
                   <td className="px-4 py-2.5">{diff.modules}</td>
+                  <td className="px-4 py-2.5 font-mono text-[11px] text-text-muted">{deviceArticle(diff, manufacturer)}</td>
                 </tr>
               ))}
               {/* Групповые автоматы */}
@@ -247,6 +377,7 @@ export default function CalculatorResults() {
                   <td className="px-4 py-2.5">{b.rating}А</td>
                   <td className="px-4 py-2.5">{b.characteristic}</td>
                   <td className="px-4 py-2.5">{b.modules}</td>
+                  <td className="px-4 py-2.5 font-mono text-[11px] text-text-muted">{deviceArticle(b, manufacturer)}</td>
                 </tr>
               ))}
               {/* Оборудование щитка (без автомата) */}
@@ -261,6 +392,7 @@ export default function CalculatorResults() {
                   <td className="px-4 py-2.5 text-text-muted">—</td>
                   <td className="px-4 py-2.5 text-text-muted">—</td>
                   <td className="px-4 py-2.5">{eq.modules}</td>
+                  <td className="px-4 py-2.5 text-text-muted">—</td>
                 </tr>
               ))}
             </tbody>
