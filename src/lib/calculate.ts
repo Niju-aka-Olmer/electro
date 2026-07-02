@@ -290,8 +290,8 @@ export function calculateAll(input: CalculationInput): CalculationResult {
   // 6. Исключаем автоматы, уже защищённые дифавтоматами
   // Дифавтомат = УЗО + автомат в одном корпусе — отдельный автомат после него не нужен
   let standaloneBreakers: CircuitBreaker[]
-  if (input.bathroomStrategy === 'everything_separated' || input.bathroomStrategy === 'separate') {
-    // Стратегия «Всё раздельно» или «Раздельный»: diff ID = diff_${breaker.id} → точное совпадение
+  if (input.bathroomStrategy === 'everything_separated') {
+    // Стратегия «Всё раздельно»: diff ID = diff_${breaker.id} → точное совпадение
     const diffBreakerIds = new Set<string>()
     for (const d of rcdDevices) {
       if (d.type === 'diff_breaker') {
@@ -299,8 +299,30 @@ export function calculateAll(input: CalculationInput): CalculationResult {
       }
     }
     standaloneBreakers = allBreakers.filter(b => !diffBreakerIds.has(b.id))
+  } else if (input.bathroomStrategy === 'separate') {
+    // Стратегия «Раздельный»: два типа дифов
+    // 1. Водозависимые приборы: diff_${breaker.id} → точное совпадение
+    // 2. Комнатные дифы (power/light/floor): diff_${room.id}_power → префиксное совпадение по комнате
+    const exactIds = new Set<string>()
+    const roomIds = new Set<string>()
+    for (const d of rcdDevices) {
+      if (d.type !== 'diff_breaker') continue
+      const stripped = d.id.replace(/^diff_/, '')
+      if (stripped.includes('_load_')) {
+        // Водозависимый прибор: точное совпадение (напр. кухня_load_dishwasher)
+        exactIds.add(stripped)
+      } else {
+        // Комнатный диф: префиксное совпадение по комнате (напр. ванная_power → ванная)
+        const m = stripped.match(/^(.+?)_(?:power|light|floor)$/)
+        if (m) roomIds.add(m[1])
+      }
+    }
+    standaloneBreakers = allBreakers.filter(b => {
+      if (exactIds.has(b.id)) return false
+      return !Array.from(roomIds).some(roomId => b.id.startsWith(roomId + '_'))
+    })
   } else {
-    // Старые стратегии: префиксное совпадение по комнате
+    // Эконом: префиксное совпадение по комнате
     const diffRoomIds = new Set<string>()
     for (const d of rcdDevices) {
       if (d.type === 'diff_breaker') {
