@@ -48,10 +48,11 @@ const SPECIAL_LOADS = [
   { value: 'washer', label: 'Стиральная машина', typicalW: 2500 },
   { value: 'dryer', label: 'Сушильная машина', typicalW: 2500 },
   { value: 'dishwasher', label: 'Посудомоечная машина', typicalW: 2200 },
+  { value: 'towel_dryer', label: 'Полотенцесушитель', typicalW: 600 },
   { value: 'refrigerator', label: 'Холодильник', typicalW: 300 },
   { value: 'ac', label: 'Кондиционер', typicalW: 2500 },
   { value: 'boiler', label: 'Водонагреватель', typicalW: 2000 },
-  { value: 'electric_floor', label: 'Тёплый пол', typicalW: 1000 },
+  { value: 'electric_floor', label: 'Тёплый пол', typicalW: 150 },
   { value: 'ventilation', label: 'Приточная вентиляция', typicalW: 500 },
   { value: 'outdoor_socket', label: 'Уличная розетка', typicalW: 2000 },
   { value: 'sauna', label: 'Электросауна', typicalW: 6000 },
@@ -119,10 +120,19 @@ function RoomForm({ room, onSave, onCancel }: RoomFormProps) {
   const [socketGroups, setSocketGroups] = useState(room?.socketGroups ?? 2)
   const [lightingPoints, setLightingPoints] = useState(room?.lightingPoints ?? 2)
   const [loads, setLoads] = useState<
-    { id: string; name: string; powerW: number; currentA: number; isHighLoad: boolean; hasSeparateGroup: boolean; modules: number }[]
+    { id: string; name: string; powerW: number; currentA: number; isHighLoad: boolean; hasSeparateGroup: boolean; modules: number; areaM2?: number }[]
   >(room?.loads ?? [])
 
   const selectedRoom = ROOM_TYPES.find(r => r.value === type)
+
+  const floorLoad = loads.find(l => l.id === 'electric_floor')
+
+  const updateFloorArea = (areaM2: number) => {
+    const powerW = areaM2 * 150
+    setLoads(prev => prev.map(l =>
+      l.id === 'electric_floor' ? { ...l, areaM2, powerW, currentA: +(powerW / 220).toFixed(1) } : l
+    ))
+  }
 
   const toggleLoad = (loadId: string) => {
     const load = SPECIAL_LOADS.find(l => l.value === loadId)
@@ -130,6 +140,22 @@ function RoomForm({ room, onSave, onCancel }: RoomFormProps) {
       setLoads(prev => {
         const exists = prev.find(l => l.id === loadId)
         if (exists) return prev.filter(l => l.id !== loadId)
+
+        if (loadId === 'electric_floor') {
+          const area = 3 // по умолчанию 3 м²
+          const powerW = area * 150
+          return [...prev, {
+            id: loadId,
+            name: load.label,
+            powerW,
+            currentA: +(powerW / 220).toFixed(1),
+            isHighLoad: false,
+            hasSeparateGroup: true,
+            modules: 0,
+            areaM2: area,
+          }]
+        }
+
         const currentA = +(load.typicalW / 220).toFixed(1)
         return [
           ...prev,
@@ -267,10 +293,34 @@ function RoomForm({ room, onSave, onCancel }: RoomFormProps) {
                   : 'border-border bg-bg-elevated text-text-secondary hover:border-border-accent'
               )}
             >
-              {load.label} ({load.typicalW / 1000}кВт)
+              {load.value === 'electric_floor'
+                ? `${load.label} (${load.typicalW}Вт/м²)`
+                : `${load.label} (${load.typicalW / 1000}кВт)`}
             </button>
           ))}
         </div>
+        {floorLoad && (
+          <div className="mt-3 flex items-center gap-3 rounded-lg border border-border bg-bg-surface px-3 py-2">
+            <label className="text-xs text-text-secondary whitespace-nowrap">
+              Площадь тёплого пола:
+            </label>
+            <input
+              type="number"
+              min={1}
+              max={50}
+              value={floorLoad.areaM2 ?? 3}
+              onChange={e => updateFloorArea(Math.max(1, Number(e.target.value) || 1))}
+              className="w-20 rounded border border-border bg-bg-elevated px-2 py-1 text-xs text-text-primary outline-none focus:border-accent-amber"
+            />
+            <span className="text-xs text-text-muted">м²</span>
+            <span className="text-xs text-accent-amber">
+              ≈ {floorLoad.powerW} Вт ({floorLoad.currentA} А)
+            </span>
+            <span className="text-[11px] text-text-muted">
+              (150 Вт/м² — средний расход тёплого пола)
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Оборудование щитка (без автомата) */}

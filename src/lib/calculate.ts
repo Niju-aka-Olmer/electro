@@ -122,7 +122,7 @@ function generateExplanation(
   }
 
   // ── 5. Приборы с водой ──
-  const WATER_IDS = ['washer', 'dishwasher', 'boiler', 'water_heater']
+  const WATER_IDS = ['washer', 'dishwasher', 'boiler', 'water_heater', 'towel_dryer']
   const waterLoads = rooms.flatMap(r =>
     r.loads.filter(l => WATER_IDS.includes(l.id)))
   if (waterLoads.length > 0) {
@@ -132,6 +132,7 @@ function generateExplanation(
       dishwasher: 'Посудомоечная машина',
       boiler: 'Водонагреватель',
       water_heater: 'Бойлер',
+      towel_dryer: 'Полотенцесушитель',
     }
     for (const load of waterLoads) {
       const room = rooms.find(r => r.loads.some(l => l.id === load.id))
@@ -150,11 +151,15 @@ function generateExplanation(
   const floorLoads = rooms.flatMap(r =>
     r.loads.filter(l => l.id === 'electric_floor'))
   if (floorLoads.length > 0) {
-    lines.push(`\n**Тёплый пол**. Нагревательный кабель или мат, уложенный в стяжку — `
+    const floorDetails = floorLoads.map(l =>
+      `${l.name}${l.areaM2 ? ` (${l.areaM2} м², ${l.powerW} Вт)` : ''}`).join(', ')
+    lines.push(`\n**Тёплый пол** — ${floorDetails}. `
+      + `Нагревательный кабель или мат, уложенный в стяжку — `
       + `это скрытая проводка, которую нельзя осмотреть. При повреждении `
       + `(например, сверление пола) ток может уйти в землю. Тёплый пол всегда `
-      + `защищается отдельным дифавтоматом 30мА, `
-      + `чтобы не оставить без защиты другие линии.`)
+      + `защищается отдельным дифавтоматом 30мА. `
+      + `Расчёт мощности: площадь (м²) × 150 Вт/м² — `
+      + `средний расход электрического тёплого пола.`)
   }
 
   // ── 7. Групповые автоматы ──

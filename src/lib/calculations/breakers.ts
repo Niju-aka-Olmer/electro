@@ -97,9 +97,19 @@ export function calcRoomBreakers(room: RoomConfig): CircuitBreaker[] {
   // --- Спецнагрузки (отдельная группа на каждую) ---
   for (const load of room.loads) {
     if (load.hasSeparateGroup) {
-      // Используем фиксированный номинал из STANDARD_LOADS, если он задан
+      // Для нагрузок с переменной мощностью (тёплый пол) — динамический расчёт
+      // Для остальных — фиксированный номинал из STANDARD_LOADS
       const standardLoad = STANDARD_LOADS[load.id]
-      const rating = standardLoad?.ratingA ?? selectBreakerRating(powerToAmps(load.powerW))
+      const isVariableLoad = load.id === 'electric_floor'
+      const rating = (!isVariableLoad && standardLoad?.ratingA)
+        ? standardLoad.ratingA
+        : selectBreakerRating(powerToAmps(load.powerW))
+
+      const powerFromArea = load.areaM2 ? ` (${load.areaM2} м² × 150 Вт/м² = ${load.powerW} Вт)` : ''
+      const reasonPrefix = standardLoad && !isVariableLoad
+        ? `${load.name}: фиксированный номинал ${rating}А (справочник нагрузок). `
+        : `${load.name}${powerFromArea}: ${load.powerW}Вт / ${VOLTAGE}В = ${powerToAmps(load.powerW).toFixed(1)}А, `
+          + `выбран ${rating}А с запасом. `
       breakers.push({
         id: `${room.id}_load_${load.id}`,
         type: 'circuit_breaker',
@@ -108,14 +118,9 @@ export function calcRoomBreakers(room: RoomConfig): CircuitBreaker[] {
         poles: load.powerW > 4000 ? 2 : 1, // >4кВт → 2P
         modules: load.powerW > 4000 ? 2 : 1,
         group: `${load.name}: ${room.name}`,
-        reason: standardLoad
-          ? `${load.name}: фиксированный номинал ${rating}А (справочник нагрузок). `
-            + (load.powerW > 4000 ? '2P — мощная нагрузка >4кВт. ' : '')
-            + `Отдельная группа обязательна для ${load.name} (ПУЭ 7.1.70).`
-          : `${load.powerW}Вт / ${VOLTAGE}В = ${powerToAmps(load.powerW).toFixed(1)}А, `
-            + `выбран ${rating}А с запасом. `
-            + (load.powerW > 4000 ? '2P — мощная нагрузка >4кВт. ' : '')
-            + `Отдельная группа обязательна для ${load.name} (ПУЭ 7.1.70).`
+        reason: reasonPrefix
+          + (load.powerW > 4000 ? '2P — мощная нагрузка >4кВт. ' : '')
+          + `Отдельная группа обязательна для ${load.name} (ПУЭ 7.1.70).`
       })
     }
   }
@@ -144,10 +149,11 @@ export const STANDARD_LOADS: Record<string, StandardLoadEntry> = {
   dishwasher:    { powerW: 2200, ratingA: 16, poles: 1, note: 'Посудомоечная машина' },
   ac:            { powerW: 2500, ratingA: 16, poles: 1, note: 'Кондиционер' },
   boiler:        { powerW: 2000, ratingA: 16, poles: 1, note: 'Водонагреватель' },
-  electric_floor: { powerW: 1000, ratingA: 10, poles: 1, note: 'Тёплый пол' },
+  electric_floor: { powerW: 150, ratingA: 6, poles: 1, note: 'Тёплый пол (150 Вт/м²)' },
   sauna:         { powerW: 6000, ratingA: 25, poles: 2, note: 'Электросауна' },
   refrigerator:  { powerW: 1000, ratingA: 16, poles: 1, note: 'Холодильник' },
   dryer:         { powerW: 2500, ratingA: 16, poles: 1, note: 'Сушильная машина' },
+  towel_dryer:   { powerW: 600,  ratingA: 10, poles: 1, note: 'Полотенцесушитель' },
   outdoor_socket: { powerW: 2000, ratingA: 10, poles: 1, note: 'Уличная розетка' },
   ventilation:   { powerW: 500,  ratingA: 6,  poles: 1, note: 'Приточная вентиляция' },
   // Оборудование щитка — занимает модули, но не требует автомата
