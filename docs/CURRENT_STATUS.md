@@ -76,6 +76,15 @@ ROW_GAP = 12px — зазор между рядами
 
 ---
 
+## Развёртывание
+
+- **VDS**: Beget, Ubuntu 24.04.4 LTS, 2 GB RAM, 14 GB SSD
+- **Домен**: [electro.asod.su](https://electro.asod.su) (A-запись → 155.212.138.175)
+- **Стек**: Node.js 20, Next.js 16 (Turbopack), PM2, Nginx, Let's Encrypt
+- **Доступ**: SSH по ключу (root@155.212.138.175)
+
+---
+
 ## Иcтория изменений (текущая сессия)
 
 | Изменение | Файлы | Описание |
@@ -105,6 +114,7 @@ ROW_GAP = 12px — зазор между рядами
 | DIN-розетка по брендам | `catalog.ts`, `CalculatorResults.tsx` | ABB M1175 (2CSM110000R0701) / Dekraft РМ-01 (18012DEK) |
 | Фикс исключения breaker'ов | `calculate.ts` | Стратегия «Раздельный»: power/floor дифы исключают все breaker'ы комнаты |
 | Пояснения 30мА + нормативы | `calculate.ts` | Убраны упоминания 10мА из всех пояснений; добавлены ПУЭ (п. 7.1.82) и ГОСТ Р 50571.3-2009 в обоснование 30мА |
+| Деплой на VDS | сервер, `.gitignore`, `docs/` | Развёрнуто на Ubuntu 24.04 (Beget): Nginx, SSL, PM2, домен electro.asod.su |
 
 ---
 
