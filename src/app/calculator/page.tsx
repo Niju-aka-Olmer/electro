@@ -25,10 +25,10 @@ export default function CalculatorPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 pt-8 pb-28">
+      <main className="mx-auto max-w-6xl px-4 pt-6 sm:pt-8 pb-20 sm:pb-28">
         {/* Инструкция сверху */}
-        <div className="mb-8 rounded-xl border border-border bg-bg-elevated p-5">
-          <h1 className="mb-2 text-xl font-bold font-display">
+        <div className="mb-6 sm:mb-8 rounded-xl border border-border bg-bg-elevated p-4 sm:p-5">
+          <h1 className="mb-2 text-lg sm:text-xl font-bold font-display">
             Калькулятор электроустановки
           </h1>
           <ul className="space-y-1.5 text-sm text-text-secondary leading-relaxed">

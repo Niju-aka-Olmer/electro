@@ -340,23 +340,27 @@ export function RealisticPanel({
   return (
     <div className="flex flex-col items-center gap-4 py-2 select-none print:w-full">
       <div className="text-center no-print">
-        <div className="text-sm font-bold tracking-[0.1em] text-gray-500 bg-gray-200 inline-block px-5 py-1 rounded-sm">РАСПРЕДЕЛИТЕЛЬНЫЙ ЩИТ</div>
-        <div className="text-[11px] text-gray-400 mt-1 font-mono">
+        <div className="text-xs sm:text-sm font-bold tracking-[0.1em] text-gray-500 bg-gray-200 inline-block px-4 sm:px-5 py-1 rounded-sm">РАСПРЕДЕЛИТЕЛЬНЫЙ ЩИТ</div>
+        <div className="text-[10px] sm:text-[11px] text-gray-400 mt-1 font-mono">
           {result.supplyPhases === 3 ? '3 фазы (380В)' : '1 фаза (220В)'} · {totalMods} модулей · щит {result.recommendedPanelModules} мест ({result.panelRows} ряда)
         </div>
       </div>
 
-      <DndContext onDragEnd={handleDragEnd}>
-        <SortableContext items={items.map(i => i.id)} strategy={rectSortingStrategy}>
-          <Enclosure>
-            <div className="flex flex-col" style={{ gap: 28 + ROW_GAP }}>
-              {rows.map((row, ri) => (
-                <PanelRow key={ri} row={row} isFirst={ri === 0} />
-              ))}
-            </div>
-          </Enclosure>
-        </SortableContext>
-      </DndContext>
+      <div className="w-full overflow-x-auto pb-2">
+        <div className="min-w-max mx-auto">
+          <DndContext onDragEnd={handleDragEnd}>
+            <SortableContext items={items.map(i => i.id)} strategy={rectSortingStrategy}>
+              <Enclosure>
+                <div className="flex flex-col" style={{ gap: 28 + ROW_GAP }}>
+                  {rows.map((row, ri) => (
+                    <PanelRow key={ri} row={row} isFirst={ri === 0} />
+                  ))}
+                </div>
+              </Enclosure>
+            </SortableContext>
+          </DndContext>
+        </div>
+      </div>
 
       <span className="text-[10px] text-gray-400 font-mono no-print">Перетаскивайте устройства для изменения порядка между рядами</span>
     </div>

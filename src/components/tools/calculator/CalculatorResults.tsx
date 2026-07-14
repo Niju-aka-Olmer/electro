@@ -189,16 +189,16 @@ export default function CalculatorResults() {
   return (
     <div className="mx-auto max-w-4xl space-y-8">
       {/* Хидер */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-start sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold font-display text-accent-amber">
+          <h2 className="text-xl sm:text-2xl font-bold font-display text-accent-amber">
             Результаты расчёта ⚡
           </h2>
-          <p className="mt-1 text-sm text-text-muted">
+          <p className="mt-1 text-xs sm:text-sm text-text-muted">
             {rooms.map(r => r.name).join(' · ')} · {input.meterAmps}А ввод · {input.installationType === 'house' ? 'дом' : 'квартира'}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-1.5 sm:gap-2">
           <button
             onClick={() => exportToXlsx(devices, panelEquipment, manufacturer)}
             title="Скачать Excel"
@@ -220,19 +220,19 @@ export default function CalculatorResults() {
           </button>
           <button
             onClick={() => setStep(2)}
-            className="no-print rounded-lg border border-border px-4 py-2 text-sm text-text-secondary hover:border-accent-amber"
+            className="no-print rounded-lg border border-border px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm text-text-secondary hover:border-accent-amber"
           >
             ← Назад
           </button>
           <button
             onClick={reset}
-            className="no-print rounded-lg border border-border px-4 py-2 text-sm text-text-secondary hover:border-accent-danger"
+            className="no-print rounded-lg border border-border px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm text-text-secondary hover:border-accent-danger"
           >
             Сбросить
           </button>
           <Link
             href="/panel"
-            className="no-print inline-flex items-center gap-1.5 rounded-lg bg-accent-amber px-5 py-2 text-sm font-semibold text-white hover:bg-accent-amber/90"
+            className="no-print inline-flex items-center gap-1.5 rounded-lg bg-accent-amber px-4 sm:px-5 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold text-white hover:bg-accent-amber/90"
           >
             Перенести в Щиток →
           </Link>
@@ -259,7 +259,7 @@ export default function CalculatorResults() {
       </div>
 
       {/* Итого */}
-      <div className="grid gap-4 sm:grid-cols-5">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-5">
         {[
           { label: 'Модулей в щитке', value: `${totalModules}`, sub: 'мод.' },
           { label: 'Рекомендуемый щиток', value: `${recommendedPanelModules}`, sub: 'мод.' },
@@ -267,8 +267,8 @@ export default function CalculatorResults() {
           { label: 'УЗО/Диф', value: `${rcds.length + diffDevices.length}`, sub: 'шт.' },
           { label: 'Оборудование щитка', value: `${panelEquipment?.length ?? 0}`, sub: panelEquipment && panelEquipment.length > 0 ? panelEquipment.map(e => e.name).join(', ') : '—' },
         ].map(s => (
-          <div key={s.label} className="rounded-xl border border-border bg-bg-elevated p-4 text-center">
-            <div className="text-2xl font-bold font-display text-accent-amber">{s.value}</div>
+          <div key={s.label} className="rounded-xl border border-border bg-bg-elevated p-3 sm:p-4 text-center">
+            <div className="text-xl sm:text-2xl font-bold font-display text-accent-amber">{s.value}</div>
             <div className="text-xs text-text-muted mt-0.5">{s.sub}</div>
             <div className="mt-1 text-xs text-text-secondary">{s.label}</div>
           </div>
@@ -323,8 +323,8 @@ export default function CalculatorResults() {
       {/* Спецификация */}
       <div>
         <h3 className="mb-4 text-lg font-semibold font-display">Спецификация оборудования</h3>
-        <div className="overflow-hidden rounded-xl border border-border">
-          <table className="w-full text-sm">
+        <div className="overflow-x-auto rounded-xl border border-border">
+          <table className="w-full text-sm min-w-[600px]">
             <thead>
               <tr className="bg-bg-elevated border-b border-border">
                 <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">Тип</th>

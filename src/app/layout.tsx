@@ -38,6 +38,9 @@ export default function RootLayout({
       data-theme="dark"
       className={`${rajdhani.variable} ${ibmPlexSans.variable} ${ibmPlexMono.variable}`}
     >
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=yes" />
+      </head>
       <body className="min-h-screen bg-bg-base text-text-primary font-sans antialiased">
         {children}
         {/* Яндекс.Метрика — заменить 109730760 на ID счётчика */}

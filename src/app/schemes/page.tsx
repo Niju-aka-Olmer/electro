@@ -3,6 +3,15 @@
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { SCHEMES } from '@/data/wiring-schemes'
+import MobileNav from '@/components/layout/MobileNav'
+
+const navLinks = [
+  { href: '/', label: 'Главная' },
+  { href: '/calculator', label: 'Калькулятор' },
+  { href: '/panel', label: 'Щиток' },
+  { href: '/schemes', label: 'Схемы' },
+  { href: '/consultant', label: 'Консультант' },
+]
 
 type RowScope = 'В коробке' | 'Между устройствами' | 'Прочее'
 type WireKind = 'l' | 'n' | 'pe' | 'sw' | 'p1' | 'p2' | 'com' | 'unknown'
@@ -90,12 +99,13 @@ export default function SchemesPage() {
       <header className="sticky top-0 z-50 border-b border-border bg-bg-base/80 backdrop-blur-lg">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
           <a href="/" className="font-display font-bold text-accent-amber">← ElectroPlan</a>
+          <MobileNav links={navLinks} currentPath="/schemes" />
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 pt-8 pb-20">
-        <div className="mb-8 rounded-xl border border-border bg-bg-elevated p-5">
-          <h1 className="mb-2 text-xl font-bold font-display">Схемы расключения</h1>
+      <main className="mx-auto max-w-6xl px-4 pt-6 sm:pt-8 pb-20">
+        <div className="mb-6 sm:mb-8 rounded-xl border border-border bg-bg-elevated p-4 sm:p-5">
+          <h1 className="mb-2 text-lg sm:text-xl font-bold font-display">Схемы расключения</h1>
           <p className="text-sm text-text-secondary leading-relaxed">
             Реальные схемы расключения выключателей. Показана распредкоробка с соединениями Wago,
             цветная маркировка жил (L/N/PE/управляющий). Все схемы соответствуют ПУЭ-7 и ГОСТ Р 50571.
@@ -130,7 +140,7 @@ export default function SchemesPage() {
         })}
 
         {/* Активная схема */}
-        <div className="rounded-xl border border-border bg-bg-elevated p-6">
+        <div className="rounded-xl border border-border bg-bg-elevated p-4 sm:p-6">
           <div className="mb-4 flex items-start justify-between gap-4">
             <div>
               <h2 className="text-lg font-bold font-display">{active.title}</h2>
@@ -262,7 +272,7 @@ export default function SchemesPage() {
         </div>
 
         {/* Пояснения */}
-        <div className="mt-8 grid gap-4 md:grid-cols-3">
+        <div className="mt-8 grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
           <div className="rounded-xl border border-border bg-bg-elevated p-4">
             <h3 className="mb-2 text-sm font-semibold">Как читать схему</h3>
             <p className="text-xs text-text-muted leading-relaxed">

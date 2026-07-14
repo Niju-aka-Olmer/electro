@@ -213,7 +213,7 @@ function RoomForm({ room, onSave, onCancel }: RoomFormProps) {
       {/* Тип помещения */}
       <div>
         <label className="mb-2 block text-sm font-medium text-text-secondary">Тип помещения</label>
-        <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5">
           {ROOM_TYPES.map(rt => (
             <button
               key={rt.value}
@@ -300,7 +300,7 @@ function RoomForm({ room, onSave, onCancel }: RoomFormProps) {
           ))}
         </div>
         {floorLoad && (
-          <div className="mt-3 flex items-center gap-3 rounded-lg border border-border bg-bg-surface px-3 py-2">
+          <div className="mt-3 flex flex-wrap items-center gap-2 sm:gap-3 rounded-lg border border-border bg-bg-surface px-3 py-2">
             <label className="text-xs text-text-secondary whitespace-nowrap">
               Площадь тёплого пола:
             </label>
@@ -310,13 +310,13 @@ function RoomForm({ room, onSave, onCancel }: RoomFormProps) {
               max={50}
               value={floorLoad.areaM2 ?? 3}
               onChange={e => updateFloorArea(Math.max(1, Number(e.target.value) || 1))}
-              className="w-20 rounded border border-border bg-bg-elevated px-2 py-1 text-xs text-text-primary outline-none focus:border-accent-amber"
+              className="w-16 sm:w-20 rounded border border-border bg-bg-elevated px-2 py-1 text-xs text-text-primary outline-none focus:border-accent-amber"
             />
             <span className="text-xs text-text-muted">м²</span>
-            <span className="text-xs text-accent-amber">
+            <span className="text-xs text-accent-amber whitespace-nowrap">
               ≈ {floorLoad.powerW} Вт ({floorLoad.currentA} А)
             </span>
-            <span className="text-[11px] text-text-muted">
+            <span className="text-[11px] text-text-muted hidden sm:inline">
               (150 Вт/м² — средний расход тёплого пола)
             </span>
           </div>
@@ -612,7 +612,7 @@ export default function CalculatorForm() {
               ? 'Для влажных помещений обязательно УЗО 10мА (ПУЭ 7.1.83). Выберите схему защиты:'
               : 'Выберите схему защиты для всех линий:'}
           </p>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
             <button
               onClick={() => setInput({ bathroomStrategy: 'economy' })}
               className={`rounded-xl border p-4 text-left transition-all ${

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
+import MobileNav from '@/components/layout/MobileNav'
 
 const navLinks = [
   { href: '/', label: 'Главная' },
@@ -42,6 +43,7 @@ export default function HomePage() {
               </a>
             ))}
           </nav>
+          <MobileNav links={navLinks} currentPath="/" />
         </div>
       </header>
 
@@ -53,19 +55,19 @@ export default function HomePage() {
         />
         <div className="pointer-events-none absolute inset-0 bg-amber-glow opacity-30" />
 
-        <div className="relative mx-auto flex max-w-6xl flex-col items-center px-4 pt-32 pb-24 text-center">
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-bg-elevated px-4 py-1.5 text-xs text-text-muted">
+        <div className="relative mx-auto flex max-w-6xl flex-col items-center px-4 pt-20 pb-16 sm:pt-32 sm:pb-24 text-center">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-bg-elevated px-3 py-1 sm:px-4 sm:py-1.5 text-[11px] sm:text-xs text-text-muted">
             ⚡ Инженерный инструмент для электромонтажа
           </div>
 
-          <h1 className="max-w-3xl text-5xl font-bold font-display leading-tight tracking-tight md:text-6xl">
+          <h1 className="max-w-3xl text-3xl sm:text-5xl md:text-6xl font-bold font-display leading-tight tracking-tight">
             Расчёт{' '}
             <span className="text-accent-amber">электроустановок</span>
             <br />
             по ПУЭ и ГОСТ
           </h1>
 
-          <p className="mt-6 max-w-xl text-lg text-text-secondary">
+          <p className="mt-5 sm:mt-6 max-w-xl text-base sm:text-lg text-text-secondary">
             Профессиональный подбор автоматов, УЗО, дифавтоматов,
             компоновка щитков и схемы расключения — для жилых помещений РФ и СНГ.
           </p>
@@ -89,12 +91,12 @@ export default function HomePage() {
 
       {/* ═══════════════════ FEATURES ═══════════════════ */}
       <section className="border-t border-border bg-bg-surface">
-        <div className="mx-auto max-w-6xl px-4 py-24">
-          <h2 className="mb-16 text-center text-3xl font-bold font-display">
+        <div className="mx-auto max-w-6xl px-4 py-16 sm:py-24">
+          <h2 className="mb-10 sm:mb-16 text-center text-2xl sm:text-3xl font-bold font-display">
             Возможности
           </h2>
 
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
             {features.map((feature, i) => (
               <div
                 key={i}

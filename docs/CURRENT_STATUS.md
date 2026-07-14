@@ -89,6 +89,9 @@ ROW_GAP = 12px — зазор между рядами
 | RealisticPanel | `RealisticPanel.tsx` | Полный переезд: CSS → React Flow → чистый HTML/CSS + dnd-kit |
 | Drag между рядами | `RealisticPanel.tsx` | Единый DndContext/SortableContext на верхнем уровне |
 | Стратегия «Всё раздельно» | `rcd.ts`, `calculate.ts`, `CalculatorForm.tsx`, `electrical.ts` | Индивидуальный дифавтомат на КАЖДЫЙ breaker: каждый прибор с водой — 10мА, влажные помещения — 10мА, все линии разделены |
+| Адаптивная вёрстка | все страницы | Mobile-first: viewport meta, мобильное меню, адаптивные заголовки/отступы/grid, скролл таблиц и щитка |
+| Пояснения 30мА + нормативы | `calculate.ts` | Убраны упоминания 10мА из всех пояснений; добавлены ПУЭ (п. 7.1.82) и ГОСТ Р 50571.3-2009 в обоснование 30мА |
+| Полотенцесушитель + тёплый пол | `breakers.ts`, `CalculatorForm.tsx`, `rcd.ts`, `calculate.ts` | Добавлен полотенцесушитель (600Вт/10А), тёплый пол с вводом м² (150 Вт/м²) |
 | Фикс номиналов нагрузок | `breakers.ts` | Исправлен холодильник 6А→16А: теперь ratingA из STANDARD_LOADS используется вместо расчёта из powerW |
 | Стратегия «Раздельный» | `rcd.ts`, `calculate.ts`, `CalculatorForm.tsx` | Переделана: водозависимые приборы на отдельных дифавтоматах 10мА, фильтруются из зонных УЗО |
 | Фикс dishwasher→washer | `rcd.ts` | Порядок в WATER_RELATED: 'dishwasher' до 'washer' (подстрока!) |

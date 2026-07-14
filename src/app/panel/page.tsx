@@ -117,8 +117,8 @@ export default function PanelPage() {
 
   if (!result) {
     return (
-      <div className="mx-auto max-w-4xl px-4 py-16 text-center">
-        <h1 className="text-3xl font-bold font-display">Расчёт щитка</h1>
+      <div className="mx-auto max-w-4xl px-4 py-12 sm:py-16 text-center">
+        <h1 className="text-2xl sm:text-3xl font-bold font-display">Расчёт щитка</h1>
         <p className="mt-4 text-text-secondary">
           Сначала выполните расчёт, чтобы увидеть компоновку щитка.
         </p>
@@ -164,11 +164,11 @@ export default function PanelPage() {
           @page { margin: 15mm; }
         }
       `}</style>
-    <div className="mx-auto max-w-6xl px-4 py-12">
+    <div className="mx-auto max-w-6xl px-4 py-8 sm:py-12">
       {/* Шапка */}
       <div className="mb-8 flex items-start justify-between">
         <div>
-          <h1 className="text-3xl font-bold font-display">Электрический щит</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold font-display">Электрический щит</h1>
           <p className="mt-1 text-text-secondary">
             {supplyPhases === 3 ? '3 фазы' : '1 фаза'} · {recommendedPanelModules} модулей · {panelRows} ряда
           </p>
@@ -243,7 +243,7 @@ export default function PanelPage() {
       {result.phaseAssignment && result.phaseAssignment.length > 0 && (
         <div className="mb-8 rounded-xl border border-border bg-bg-elevated p-6">
           <h2 className="mb-4 text-lg font-semibold font-display">Распределение по фазам</h2>
-          <div className="grid grid-cols-3 gap-4 text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-sm">
             {(['L1', 'L2', 'L3'] as const).map(phase => {
               const phaseDevices = result.phaseAssignment!.filter(a => a.phase.includes(phase))
               const phaseColor = phase === 'L1' ? 'text-red-600' : phase === 'L2' ? 'text-amber-600' : 'text-purple-600'
