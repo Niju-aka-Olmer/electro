@@ -1,0 +1,38 @@
+// Prisma schema for ElectroPlan
+// PostgreSQL on VDS
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String              @id @default(cuid())
+  username      String              @unique
+  email         String              @unique
+  passwordHash  String
+  resetToken    String?
+  resetTokenExp DateTime?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  calculations  SavedCalculation[]
+
+  @@map("users")
+}
+
+model SavedCalculation {
+  id        String   @id @default(cuid())
+  name      String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  data      String   // JSON-stringified CalculationResult + InputData
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("saved_calculations")
+}
