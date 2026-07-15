@@ -60,14 +60,14 @@ export default function MobileNav({ links, currentPath = '/', className }: Mobil
       <div
         onClick={() => setOpen(false)}
         className={cn(
-          'fixed inset-0 z-40 bg-black/60 backdrop-blur-sm transition-opacity',
+          'fixed inset-0 z-40 bg-black/80 backdrop-blur-sm transition-opacity',
           open ? 'opacity-100' : 'opacity-0 pointer-events-none'
         )}
       />
 
       {/* Панель меню */}
       <div className={cn(
-        'fixed top-0 right-0 z-40 h-full w-64 bg-bg-elevated border-l border-border',
+        'fixed top-0 right-0 z-40 h-full w-64 bg-bg-surface border-l border-border shadow-2xl shadow-black/50',
         'flex flex-col p-6 pt-20 transition-transform',
         open ? 'translate-x-0' : 'translate-x-full'
       )}>
@@ -79,8 +79,8 @@ export default function MobileNav({ links, currentPath = '/', className }: Mobil
               className={cn(
                 'rounded-lg px-4 py-2.5 text-base font-medium transition-all',
                 currentPath === link.href
-                  ? 'bg-accent-amber/10 text-accent-amber'
-                  : 'text-text-secondary hover:bg-bg-surface hover:text-text-primary'
+                  ? 'bg-accent-amber/20 text-amber-400'
+                  : 'text-text-primary hover:bg-bg-subtle hover:text-amber-400'
               )}
             >
               {link.label}
