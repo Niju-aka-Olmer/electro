@@ -56,7 +56,16 @@ export default function HomePage() {
               </Link>
             )}
           </nav>
-          <MobileNav links={navLinks} currentPath="/" />
+          <MobileNav
+            links={[
+              ...navLinks,
+              ...(session
+                ? [{ href: '/dashboard', label: 'Личный кабинет' }]
+                : [{ href: '/login', label: 'Войти / Регистрация' }]
+              ),
+            ]}
+            currentPath="/"
+          />
         </div>
       </header>
 
