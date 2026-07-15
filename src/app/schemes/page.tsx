@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { SCHEMES } from '@/data/wiring-schemes'
 import MobileNav from '@/components/layout/MobileNav'
+import UnderConstruction from '@/components/layout/UnderConstruction'
 
 const navLinks = [
   { href: '/', label: 'Главная' },
@@ -11,6 +12,7 @@ const navLinks = [
   { href: '/panel', label: 'Щиток' },
   { href: '/schemes', label: 'Схемы' },
   { href: '/consultant', label: 'Консультант' },
+  { href: '/disclaimer', label: 'Отказ от ответственности' },
 ]
 
 type RowScope = 'В коробке' | 'Между устройствами' | 'Прочее'
@@ -111,6 +113,8 @@ export default function SchemesPage() {
             цветная маркировка жил (L/N/PE/управляющий). Все схемы соответствуют ПУЭ-7 и ГОСТ Р 50571.
           </p>
         </div>
+
+        <UnderConstruction className="mb-6" />
 
         {/* Категории */}
         {['Обычные', 'Проходные', 'Специальные', 'Автоматика', 'Комбинированные'].map(cat => {

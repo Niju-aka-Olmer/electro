@@ -10,6 +10,7 @@ const navLinks = [
   { href: '/panel', label: 'Щиток' },
   { href: '/schemes', label: 'Схемы' },
   { href: '/consultant', label: 'Консультант' },
+  { href: '/disclaimer', label: 'Отказ от ответственности' },
 ]
 
 export default function HomePage() {
@@ -125,6 +126,11 @@ export default function HomePage() {
         <p>ElectroPlan — инструмент для проектирования электроустановок</p>
         <p className="mt-1">
           Расчёты носят справочный характер. Всегда сверяйтесь с актуальными нормативами.
+        </p>
+        <p className="mt-3">
+          <a href="/disclaimer" className="text-accent-amber/70 hover:text-accent-amber transition-colors underline underline-offset-2">
+            Отказ от ответственности
+          </a>
         </p>
       </footer>
     </div>

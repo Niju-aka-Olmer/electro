@@ -5,6 +5,7 @@ import { useCalculatorStore } from '@/store/calculatorStore'
 import Link from 'next/link'
 import { RealisticPanel } from '@/components/panel/RealisticPanel'
 import type { CircuitBreaker, RCD, LoadBreakSwitch, CalculationResult } from '@/types/electrical'
+import UnderConstruction from '@/components/layout/UnderConstruction'
 
 function isRCD(d: CircuitBreaker | RCD): d is RCD {
   return 'leakageMA' in d
@@ -174,6 +175,7 @@ export default function PanelPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <UnderConstruction />
           <button
             onClick={() => window.print()}
             title="Распечатать"
