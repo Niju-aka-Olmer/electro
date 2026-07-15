@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { cn } from '@/lib/utils'
 
 interface NavLink {
@@ -16,79 +17,56 @@ interface MobileNavProps {
 
 export default function MobileNav({ links, currentPath = '/', className }: MobileNavProps) {
   const [open, setOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
 
-  // Закрывать при навигации
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   useEffect(() => {
     setOpen(false)
   }, [currentPath])
 
-  // Блокировать скролл body при открытии
   useEffect(() => {
-    if (open) {
-      document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = ''
-    }
+    document.body.style.overflow = open ? 'hidden' : ''
     return () => { document.body.style.overflow = '' }
   }, [open])
 
-  return (
-    <div className={cn('md:hidden', className)}>
-      {/* Гамбургер */}
-      <button
-        onClick={() => setOpen(!open)}
-        className="relative z-50 flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-bg-elevated"
-        aria-label="Меню"
-      >
-        <div className="flex flex-col gap-1">
-          <span className={cn(
-            'block h-0.5 w-4 rounded bg-text-secondary transition-all',
-            open && 'translate-y-1.5 rotate-45'
-          )} />
-          <span className={cn(
-            'block h-0.5 w-4 rounded bg-text-secondary transition-all',
-            open && 'opacity-0'
-          )} />
-          <span className={cn(
-            'block h-0.5 w-4 rounded bg-text-secondary transition-all',
-            open && '-translate-y-1.5 -rotate-45'
-          )} />
-        </div>
-      </button>
-
-      {/* Overlay */}
+  // Портал в document.body — избегаем любых родительских CSS-конфликтов
+  const menuContent = (
+    <>
+      {/* Overlay — сплошной чёрный, без блюра */}
       <div
         onClick={() => setOpen(false)}
-        className={cn(
-          'fixed inset-0 z-40 transition-opacity',
-          open ? 'opacity-100' : 'opacity-0 pointer-events-none'
-        )}
-        style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }}
+        className="fixed inset-0 z-40 transition-opacity duration-300"
+        style={{
+          backgroundColor: 'rgba(0,0,0,0.92)',
+          opacity: open ? 1 : 0,
+          pointerEvents: open ? 'auto' : 'none',
+        }}
       />
 
       {/* Панель меню */}
       <div
-        className={cn(
-          'fixed top-0 right-0 z-40 h-full w-64 flex flex-col p-6 pt-20 transition-transform',
-          open ? 'translate-x-0' : 'translate-x-full'
-        )}
+        className="fixed top-0 right-0 z-50 h-full w-64 flex flex-col p-6 transition-transform duration-300"
         style={{
-          background: '#111318',
-          borderLeft: '1px solid rgba(255,255,255,0.1)',
-          boxShadow: '-4px 0 24px rgba(0,0,0,0.5)',
+          transform: open ? 'translateX(0)' : 'translateX(100%)',
+          backgroundColor: '#111318',
+          borderLeft: '1px solid rgba(255,255,255,0.12)',
+          boxShadow: '-8px 0 32px rgba(0,0,0,0.7)',
         }}
       >
-        <nav className="flex flex-col gap-3">
+        <nav className="flex flex-col gap-1 mt-16">
           {links.map(link => {
             const isActive = currentPath === link.href
             return (
               <a
                 key={link.href}
                 href={link.href}
-                className="rounded-lg px-4 py-3 text-base font-semibold transition-all"
+                className="rounded-lg px-4 py-3 text-base font-semibold no-underline"
                 style={{
                   color: isActive ? '#FBBF24' : '#F1F5F9',
-                  background: isActive ? 'rgba(251,191,36,0.15)' : 'transparent',
+                  backgroundColor: isActive ? 'rgba(251,191,36,0.18)' : 'transparent',
                 }}
               >
                 {link.label}
@@ -97,6 +75,42 @@ export default function MobileNav({ links, currentPath = '/', className }: Mobil
           })}
         </nav>
       </div>
+    </>
+  )
+
+  return (
+    <div className={cn('md:hidden', className)}>
+      {/* Гамбургер */}
+      <button
+        onClick={() => setOpen(!open)}
+        className="relative z-50 flex h-10 w-10 items-center justify-center rounded-lg"
+        aria-label="Меню"
+        style={{ backgroundColor: '#1A1D24', border: '1px solid rgba(255,255,255,0.1)' }}
+      >
+        <div className="flex flex-col gap-1.5">
+          <span className={cn(
+            'block h-0.5 w-5 rounded transition-all',
+            open && 'translate-y-2 rotate-45'
+          )}
+          style={{ backgroundColor: '#94A3B8' }}
+          />
+          <span className={cn(
+            'block h-0.5 w-5 rounded transition-all',
+            open && 'opacity-0'
+          )}
+          style={{ backgroundColor: '#94A3B8' }}
+          />
+          <span className={cn(
+            'block h-0.5 w-5 rounded transition-all',
+            open && '-translate-y-2 -rotate-45'
+          )}
+          style={{ backgroundColor: '#94A3B8' }}
+          />
+        </div>
+      </button>
+
+      {/* Рендерим через портал — полностью вне дерева страницы */}
+      {mounted && createPortal(menuContent, document.body)}
     </div>
   )
 }
