@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Rajdhani, IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
 import Script from 'next/script'
+import SessionProvider from '@/components/auth/SessionProvider'
 import './globals.css'
 
 const rajdhani = Rajdhani({
@@ -42,7 +43,9 @@ export default function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=yes" />
       </head>
       <body className="min-h-screen bg-bg-base text-text-primary font-sans antialiased">
-        {children}
+        <SessionProvider>
+          {children}
+        </SessionProvider>
         {/* Яндекс.Метрика — заменить 109730760 на ID счётчика */}
         <Script id="yandex-metrika" strategy="afterInteractive">
           {`

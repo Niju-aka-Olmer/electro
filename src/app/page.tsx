@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
+import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import MobileNav from '@/components/layout/MobileNav'
 
@@ -15,6 +17,7 @@ const navLinks = [
 
 export default function HomePage() {
   const [mounted, setMounted] = useState(false)
+  const { data: session } = useSession()
   useEffect(() => setMounted(true), [])
 
   return (
@@ -43,6 +46,15 @@ export default function HomePage() {
                 {link.label}
               </a>
             ))}
+            {session ? (
+              <Link href="/dashboard" className="text-sm font-medium text-accent-amber hover:text-accent-amber/80 transition-colors">
+                Кабинет
+              </Link>
+            ) : (
+              <Link href="/login" className="rounded-lg bg-accent-amber px-3 py-1.5 text-sm font-semibold text-white hover:bg-accent-amber/90 transition-colors">
+                Войти
+              </Link>
+            )}
           </nav>
           <MobileNav links={navLinks} currentPath="/" />
         </div>
