@@ -119,6 +119,7 @@ ROW_GAP = 12px — зазор между рядами
 | Мобильное меню v2 | `MobileNav.tsx` | React Portal, чистые inline-стили, без transform/backdrop-filter — исправлена прозрачность на iOS |
 | Плашки «В разработке» | `UnderConstruction.tsx`, страницы | Добавлены на щиток, схемы, консультант |
 | Отказ от ответственности | `disclaimer/page.tsx` | 7 разделов, ссылка в футере и меню |
+| Авторизация | `auth.ts`, `prisma.ts`, `login/`, `dashboard/`, API routes | NextAuth.js v5, Credentials, bcrypt, JWT, PostgreSQL 16 + Prisma |
 
 ---
 
