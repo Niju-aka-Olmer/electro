@@ -6,7 +6,7 @@ import { SCHEMES } from '@/data/wiring-schemes'
 import MobileNav from '@/components/layout/MobileNav'
 import UnderConstruction from '@/components/layout/UnderConstruction'
 import SchemeDiagram from '@/components/schemes/SchemeDiagram'
-import { buildDiagramData } from '@/components/schemes/buildDiagram'
+import { buildWagoGroups } from '@/components/schemes/buildDiagram'
 
 const navLinks = [
   { href: '/', label: 'Главная' },
@@ -132,10 +132,9 @@ export default function SchemesPage() {
           {/* Диаграмма схемы */}
           <div className="mb-6">
             <SchemeDiagram
-              title={`${active.title} — ${active.cableInfo}`}
-              source="Щиток"
-              jbox="Распредкоробка"
-              devices={buildDiagramData(active).devices}
+              title={active.title}
+              cableInfo={active.cableInfo}
+              groups={buildWagoGroups(active)}
             />
           </div>
 
