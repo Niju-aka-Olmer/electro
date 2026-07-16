@@ -5,8 +5,6 @@ import { cn } from '@/lib/utils'
 import { SCHEMES } from '@/data/wiring-schemes'
 import MobileNav from '@/components/layout/MobileNav'
 import UnderConstruction from '@/components/layout/UnderConstruction'
-import SchemeDiagram from '@/components/schemes/SchemeDiagram'
-import { buildWagoGroups } from '@/components/schemes/buildDiagram'
 
 const navLinks = [
   { href: '/', label: 'Главная' },
@@ -52,9 +50,14 @@ function wireColor(kind: WireKind) {
 export default function SchemesPage() {
   const [activeScheme, setActiveScheme] = useState<string>(SCHEMES[0].id)
   const [showHelp, setShowHelp] = useState(true)
+  const [imgError, setImgError] = useState(false)
 
   const active = SCHEMES.find(s => s.id === activeScheme) ?? SCHEMES[0]
   const rows = active.connections.map(parseConnectionToRow)
+  const imgSrc = `/images/schemes/${active.id}.jpg`
+
+  // Сбрасываем ошибку при смене схемы
+  useState(() => { setImgError(false) })
 
   return (
     <div className="min-h-screen">
@@ -87,7 +90,7 @@ export default function SchemesPage() {
                 {schemes.map(s => (
                   <button
                     key={s.id}
-                    onClick={() => setActiveScheme(s.id)}
+                    onClick={() => { setActiveScheme(s.id); setImgError(false) }}
                     className={cn(
                       'rounded-lg border px-4 py-2 text-xs font-medium transition-all',
                       activeScheme === s.id
@@ -129,13 +132,24 @@ export default function SchemesPage() {
             </button>
           </div>
 
-          {/* Диаграмма схемы */}
-          <div className="mb-6">
-            <SchemeDiagram
-              title={active.title}
-              cableInfo={active.cableInfo}
-              groups={buildWagoGroups(active)}
-            />
+          {/* Картинка схемы */}
+          <div className="mb-6 overflow-hidden rounded-lg border border-border">
+            {!imgError ? (
+              <img
+                src={imgSrc}
+                alt={active.title}
+                className="w-full h-auto max-h-[500px] object-contain bg-white"
+                loading="lazy"
+                onError={() => setImgError(true)}
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center py-16 px-4 text-center bg-bg-base">
+                <p className="text-sm text-text-muted mb-2">Изображение ещё не загружено</p>
+                <p className="text-xs text-text-muted/60">
+                  Добавьте файл <code className="bg-bg-elevated px-1.5 py-0.5 rounded text-accent-amber/70 text-xs">public/images/schemes/{active.id}.jpg</code>
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Таблица соединений */}
