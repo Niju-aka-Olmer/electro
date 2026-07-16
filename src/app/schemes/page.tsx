@@ -56,7 +56,8 @@ export default function SchemesPage() {
   const active = SCHEMES.find(s => s.id === activeScheme) ?? SCHEMES[0]
   const rows = active.connections.map(parseConnectionToRow)
 
-  const [imgSrc, setImgSrc] = useState(`/images/schemes/${active.id}.svg`)
+  const [imgSrc, setImgSrc] = useState('')
+  useEffect(() => { setImgSrc(`/images/schemes/${active.id}.svg`) }, [active.id])
 
   // Сброс ошибки при смене схемы
   const prevScheme = useRef(activeScheme)
