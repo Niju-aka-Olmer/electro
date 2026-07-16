@@ -33,7 +33,8 @@ export interface WiringScheme {
   cableInfo: string
   devices: string
   connections: string[]
-  Svg: React.FC
+  imageUrl?: string  // URL картинки-схемы (опционально)
+  Svg?: React.FC      // старые SVG (deprecated)
 }
 
 // ─── УТИЛИТЫ ───
@@ -873,6 +874,7 @@ export const SCHEMES: WiringScheme[] = [
       "В коробке: SW(выключатель) → L(лампа)",
     ],
     Svg: SvgSingleSwitch,
+    imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d6/Wiring_diagram_of_junction_box.JPG/800px-Wiring_diagram_of_junction_box.JPG',
   },
   {
     id: "two-key-switch",
@@ -889,6 +891,7 @@ export const SCHEMES: WiringScheme[] = [
       "В коробке: SW2(выключатель) → L(лампа2)",
     ],
     Svg: SvgTwoKeySwitch,
+    imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d6/Wiring_diagram_of_junction_box.JPG/800px-Wiring_diagram_of_junction_box.JPG',
   },
   {
     id: "three-key-switch",
