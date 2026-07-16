@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { cn } from '@/lib/utils'
 import { SCHEMES } from '@/data/wiring-schemes'
 import MobileNav from '@/components/layout/MobileNav'
@@ -51,13 +51,32 @@ export default function SchemesPage() {
   const [activeScheme, setActiveScheme] = useState<string>(SCHEMES[0].id)
   const [showHelp, setShowHelp] = useState(true)
   const [imgError, setImgError] = useState(false)
+  const [imgRetry, setImgRetry] = useState(false)
+  const [imgSrc, setImgSrc] = useState(`/images/schemes/${active.id}.svg`)
+
+  // Сброс ошибки и пути при смене схемы
+  const prevScheme = useRef(activeScheme)
+  useEffect(() => {
+    if (prevScheme.current !== activeScheme) {
+      prevScheme.current = activeScheme
+      setImgError(false)
+      setImgRetry(false)
+      setImgSrc(`/images/schemes/${active.id}.svg`)
+    }
+  }, [active.id, activeScheme])
+
+  const handleImgError = () => {
+    if (!imgRetry) {
+      // Пробуем jpg
+      setImgRetry(true)
+      setImgSrc(`/images/schemes/${active.id}.jpg`)
+    } else {
+      setImgError(true)
+    }
+  }
 
   const active = SCHEMES.find(s => s.id === activeScheme) ?? SCHEMES[0]
   const rows = active.connections.map(parseConnectionToRow)
-  const imgSrc = `/images/schemes/${active.id}.jpg`
-
-  // Сбрасываем ошибку при смене схемы
-  useState(() => { setImgError(false) })
 
   return (
     <div className="min-h-screen">
@@ -140,13 +159,13 @@ export default function SchemesPage() {
                 alt={active.title}
                 className="w-full h-auto max-h-[500px] object-contain bg-white"
                 loading="lazy"
-                onError={() => setImgError(true)}
+                onError={handleImgError}
               />
             ) : (
               <div className="flex flex-col items-center justify-center py-16 px-4 text-center bg-bg-base">
                 <p className="text-sm text-text-muted mb-2">Изображение ещё не загружено</p>
                 <p className="text-xs text-text-muted/60">
-                  Добавьте файл <code className="bg-bg-elevated px-1.5 py-0.5 rounded text-accent-amber/70 text-xs">public/images/schemes/{active.id}.jpg</code>
+                  Добавьте файл <code className="bg-bg-elevated px-1.5 py-0.5 rounded text-accent-amber/70 text-xs">public/images/schemes/{active.id}.svg</code> или <code className="bg-bg-elevated px-1.5 py-0.5 rounded text-accent-amber/70 text-xs">.jpg</code>
                 </p>
               </div>
             )}

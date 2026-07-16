@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" style="background:#fff">
+<defs><marker id="a" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#333"/></marker></defs>
+<text x="400" y="28" text-anchor="middle" font-family="Arial" font-size="18" font-weight="bold" fill="#333">Датчик движения</text>
+<rect x="310" y="50" width="180" height="32" rx="6" fill="#f8f9fa" stroke="#333" stroke-width="1.5"/>
+<text x="400" y="72" text-anchor="middle" font-family="Arial" font-size="13" font-weight="bold" fill="#333">Щиток ~220В</text>
+<line x1="330" y1="82" x2="330" y2="140" stroke="#EF4444" stroke-width="3"/><text x="325" y="120" font-family="Arial" font-size="11" fill="#EF4444" font-weight="bold">L</text>
+<line x1="400" y1="82" x2="400" y2="140" stroke="#60A5FA" stroke-width="3"/><text x="395" y="120" font-family="Arial" font-size="11" fill="#60A5FA" font-weight="bold">N</text>
+<line x1="470" y1="82" x2="470" y2="140" stroke="#34D399" stroke-width="3"/><text x="465" y="120" font-family="Arial" font-size="11" fill="#34D399" font-weight="bold">PE</text>
+<rect x="250" y="140" width="300" height="120" rx="10" fill="#fff8e1" stroke="#f9a825" stroke-width="2" stroke-dasharray="6,3"/>
+<text x="400" y="165" text-anchor="middle" font-family="Arial" font-size="13" font-weight="bold" fill="#f9a825">РАСПРЕДКОРОБКА</text>
+<text x="265" y="190" font-family="Arial" font-size="10" fill="#555">⚡ L(щиток) → L(датчик)</text>
+<text x="265" y="206" font-family="Arial" font-size="10" fill="#555">⚡ N(щиток) → N(датчик)</text>
+<text x="265" y="222" font-family="Arial" font-size="10" fill="#555">⚡ Выход датчика → L(лампа)</text>
+<text x="265" y="238" font-family="Arial" font-size="10" fill="#555">⚡ N(щиток) → N(лампа), PE → PE(лампа)</text>
+
+</rect>
+<rect x="20" y="430" width="760" height="50" rx="6" fill="#f8f9fa" stroke="#ddd" stroke-width="1"/>
+<text x="50" y="452" font-family="Arial" font-size="10" fill="#555">L-Фаза(красн)</text><line x1="50" y1="460" x2="160" y2="460" stroke="#EF4444" stroke-width="3"/>
+<text x="180" y="452" font-family="Arial" font-size="10" fill="#555">N-Ноль(син)</text><line x1="180" y1="460" x2="280" y2="460" stroke="#60A5FA" stroke-width="3"/>
+<text x="300" y="452" font-family="Arial" font-size="10" fill="#555">PE-Земля(зел)</text><line x1="300" y1="460" x2="420" y2="460" stroke="#34D399" stroke-width="3"/>
+<text x="440" y="452" font-family="Arial" font-size="10" fill="#555">SW-Управл(фиол)</text><line x1="440" y1="460" x2="560" y2="460" stroke="#C084FC" stroke-width="2" stroke-dasharray="5,3"/>
+</svg>
