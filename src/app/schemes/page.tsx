@@ -5,6 +5,8 @@ import { cn } from '@/lib/utils'
 import { SCHEMES } from '@/data/wiring-schemes'
 import MobileNav from '@/components/layout/MobileNav'
 import UnderConstruction from '@/components/layout/UnderConstruction'
+import SchemeDiagram from '@/components/schemes/SchemeDiagram'
+import { buildDiagramData } from '@/components/schemes/buildDiagram'
 
 const navLinks = [
   { href: '/', label: 'Главная' },
@@ -127,21 +129,15 @@ export default function SchemesPage() {
             </button>
           </div>
 
-          {/* Картинка схемы */}
-          {active.imageUrl ? (
-            <div className="mb-6 overflow-hidden rounded-lg border border-border bg-white">
-              <img
-                src={active.imageUrl}
-                alt={active.title}
-                className="w-full h-auto max-h-[500px] object-contain"
-                loading="lazy"
-              />
-            </div>
-          ) : (
-            <div className="mb-6 flex items-center justify-center rounded-lg border border-dashed border-border bg-bg-base py-16">
-              <p className="text-sm text-text-muted">Изображение схемы готовится</p>
-            </div>
-          )}
+          {/* Диаграмма схемы */}
+          <div className="mb-6">
+            <SchemeDiagram
+              title={`${active.title} — ${active.cableInfo}`}
+              source="Щиток"
+              jbox="Распредкоробка"
+              devices={buildDiagramData(active).devices}
+            />
+          </div>
 
           {/* Таблица соединений */}
           <div className="rounded-lg bg-bg-base p-4">
