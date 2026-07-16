@@ -52,9 +52,13 @@ export default function SchemesPage() {
   const [showHelp, setShowHelp] = useState(true)
   const [imgError, setImgError] = useState(false)
   const [imgRetry, setImgRetry] = useState(false)
+
+  const active = SCHEMES.find(s => s.id === activeScheme) ?? SCHEMES[0]
+  const rows = active.connections.map(parseConnectionToRow)
+
   const [imgSrc, setImgSrc] = useState(`/images/schemes/${active.id}.svg`)
 
-  // Сброс ошибки и пути при смене схемы
+  // Сброс ошибки при смене схемы
   const prevScheme = useRef(activeScheme)
   useEffect(() => {
     if (prevScheme.current !== activeScheme) {
@@ -67,16 +71,12 @@ export default function SchemesPage() {
 
   const handleImgError = () => {
     if (!imgRetry) {
-      // Пробуем jpg
       setImgRetry(true)
       setImgSrc(`/images/schemes/${active.id}.jpg`)
     } else {
       setImgError(true)
     }
   }
-
-  const active = SCHEMES.find(s => s.id === activeScheme) ?? SCHEMES[0]
-  const rows = active.connections.map(parseConnectionToRow)
 
   return (
     <div className="min-h-screen">
